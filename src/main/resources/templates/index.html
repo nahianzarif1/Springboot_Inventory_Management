@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Inventory System</title>
+</head>
+<body>
+<h1>Inventory System</h1>
+
+<p>
+    This is a minimal Thymeleaf landing page.
+</p>
+
+<ul>
+    <li><a th:href="@{/products}">Products API</a> (REST)</li>
+    <li><a th:href="@{/ui/products}">Products Page</a></li>
+    <li><a th:href="@{/ui/cart}">Cart Page</a></li>
+    <li><a th:href="@{/ui/orders}">Orders Page</a></li>
+    <li><a th:href="@{/ui/admin}">Admin Page</a></li>
+    <li><a th:href="@{/login}">Login</a></li>
+</ul>
+</body>
+</html>

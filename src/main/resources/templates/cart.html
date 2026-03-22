@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Cart</title>
+</head>
+<body>
+<h2>Cart</h2>
+
+<div sec:authorize="hasRole('BUYER')">
+    <form th:action="@{/ui/cart/add}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <input type="number" name="productId" placeholder="Product ID" required/>
+        <input type="number" name="quantity" placeholder="Quantity" required/>
+        <button type="submit">Add to Cart</button>
+    </form>
+
+    <table border="1" cellspacing="0" cellpadding="6">
+        <thead>
+        <tr>
+            <th>Product</th>
+            <th>Unit Price</th>
+            <th>Quantity</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${cartItems}">
+            <td th:text="${item.productName}">Name</td>
+            <td th:text="${item.unitPrice}">0</td>
+            <td th:text="${item.quantity}">0</td>
+            <td>
+                <form th:action="@{/ui/cart/remove}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <input type="hidden" name="productId" th:value="${item.productId}"/>
+                    <button type="submit">Remove</button>
+                </form>
+            </td>
+        </tr>
+        </tbody>
+    </table>
+
+    <form th:action="@{/ui/cart/checkout}" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        <button type="submit">Checkout</button>
+    </form>
+</div>
+
+<p><a th:href="@{/}">Home</a></p>
+</body>
+</html>

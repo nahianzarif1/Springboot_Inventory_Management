@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>Orders</title>
+</head>
+<body>
+<h2>Orders</h2>
+
+<table border="1" cellspacing="0" cellpadding="6">
+    <thead>
+    <tr>
+        <th>Order ID</th>
+        <th>Buyer</th>
+        <th>Status</th>
+        <th>Created</th>
+        <th>Items</th>
+        <th sec:authorize="hasRole('ADMIN')">Update Status</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="o : ${orders}">
+        <td th:text="${o.id}">1</td>
+        <td th:text="${o.buyerUsername}">buyer</td>
+        <td th:text="${o.status}">CREATED</td>
+        <td th:text="${o.createdAt}">-</td>
+        <td>
+            <ul>
+                <li th:each="i : ${o.items}" th:text="${i.productName + ' x ' + i.quantity}">Item</li>
+            </ul>
+        </td>
+        <td sec:authorize="hasRole('ADMIN')">
+            <form th:action="@{'/ui/orders/' + ${o.id} + '/status'}" method="post">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <select name="status">
+                    <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
+                </select>
+                <button type="submit">Update</button>
+            </form>
+        </td>
+    </tr>
+    </tbody>
+</table>
+
+<p><a th:href="@{/}">Home</a></p>
+</body>
+</html>
