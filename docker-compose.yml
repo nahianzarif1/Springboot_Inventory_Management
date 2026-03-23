@@ -3,10 +3,10 @@ services:
     image: postgres:16
     environment:
       POSTGRES_DB: inventory_db
-      POSTGRES_USER: inventory
-      POSTGRES_PASSWORD: inventory
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: nahian12109019
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
 
@@ -14,10 +14,11 @@ services:
     build: .
     environment:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/inventory_db
-      SPRING_DATASOURCE_USERNAME: inventory
-      SPRING_DATASOURCE_PASSWORD: inventory
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: nahian12109019
+      PORT: 8080
     ports:
-      - "8080:8080"
+      - "${APP_PORT:-8080}:8080"
     depends_on:
       - db
 
