@@ -1,7 +1,11 @@
 package com.example.inventory_management.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "categories", uniqueConstraints = {
@@ -20,4 +24,7 @@ public class Category {
 
     @Column(nullable = false, length = 120)
     private String name;
+
+    @Column(length = 500)
+    private String description;
 }

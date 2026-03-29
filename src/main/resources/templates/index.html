@@ -1,56 +1,60 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
 <body>
-<div th:replace="~{fragments/layout :: content}">
-    <div th:fragment="content">
-        <div class="h1">Dashboard</div>
-        <p class="sub">Welcome to your Inventory Management System. Use the shortcuts below to manage products, orders, and users.</p>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <div class="h1">Dashboard</div>
+    <p class="sub">Browse products publicly, then sign in as buyer, seller, or admin to use role-specific tools.</p>
 
-        <div class="grid grid-2">
-            <div class="card">
-                <div class="kpi">
-                    <div>
-                        <div class="label">Quick Start</div>
-                        <div class="value">UI</div>
-                    </div>
-                    <span class="badge success">Ready</span>
-                </div>
-                <p style="color: var(--muted); margin: 12px 0 0;">Use the UI pages for day-to-day tasks. The REST API is also available.</p>
-                <div style="margin-top: 12px; display:flex; gap:10px; flex-wrap:wrap;">
-                    <a class="btn primary" th:href="@{/ui/products}">Products</a>
-                    <a class="btn" th:href="@{/products}">Products API</a>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="kpi">
-                    <div>
-                        <div class="label">Security</div>
-                        <div class="value">Roles</div>
-                    </div>
-                    <span class="badge warn">Enabled</span>
-                </div>
-                <ul style="color: var(--muted); margin: 12px 0 0;">
-                    <li><strong>ADMIN</strong>: manage users, order statuses</li>
-                    <li><strong>SELLER</strong>: create/update/delete own products</li>
-                    <li><strong>BUYER</strong>: cart, checkout, view orders</li>
-                </ul>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top:16px;">
+    <div class="grid grid-2">
+        <div class="card">
             <div class="kpi">
                 <div>
-                    <div class="label">Default Accounts</div>
-                    <div class="value">Seeded</div>
+                    <div class="label">Catalog</div>
+                    <div class="value">Products</div>
                 </div>
-                <span class="badge">admin / seller / buyer</span>
+                <span class="badge success">Live</span>
             </div>
-            <p style="color: var(--muted); margin: 12px 0 0;">
-                Log in with: <strong>admin/admin123</strong>, <strong>seller/seller123</strong>, <strong>buyer/buyer123</strong>
-            </p>
+            <p class="muted" style="margin:12px 0 0;">Search, filter by category, and add items when you are signed in as a seller.</p>
+            <div style="margin-top:12px;">
+                <a class="btn primary" th:href="@{/ui/products}">Open products</a>
+            </div>
+        </div>
+        <div class="card">
+            <div class="kpi">
+                <div>
+                    <div class="label">Roles</div>
+                    <div class="value">RBAC</div>
+                </div>
+                <span class="badge warn">Spring Security</span>
+            </div>
+            <ul class="muted stack" style="margin:12px 0 0;">
+                <li><strong>Admin</strong> - users, inventory, reports, all orders</li>
+                <li><strong>Seller</strong> - own products, stock history, related orders</li>
+                <li><strong>Buyer</strong> - cart, checkout, order history and cancel</li>
+            </ul>
         </div>
     </div>
-</div>
+
+    <div class="card" style="margin-top:16px;">
+        <div class="kpi">
+            <div>
+                <div class="label">Demo accounts</div>
+                <div class="value">Seeded</div>
+            </div>
+        </div>
+        <p class="muted" style="margin:12px 0 0;">
+            admin / admin123, seller / seller123, buyer / buyer123
+        </p>
+    </div>
+</main>
+<div class="container footer">Inventory Management, PostgreSQL, Spring Boot 3</div>
 </body>
 </html>

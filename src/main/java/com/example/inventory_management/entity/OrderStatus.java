@@ -1,7 +1,7 @@
 package com.example.inventory_management.entity;
 
 public enum OrderStatus {
-    CREATED,
+    PENDING,
     PAID,
     SHIPPED,
     CANCELED

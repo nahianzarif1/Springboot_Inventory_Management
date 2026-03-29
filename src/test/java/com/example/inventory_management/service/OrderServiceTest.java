@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Import;
 
 import com.example.inventory_management.repository.CartItemRepository;
 import com.example.inventory_management.repository.OrderRepository;
+import com.example.inventory_management.service.impl.InventoryLogServiceImpl;
 import com.example.inventory_management.service.impl.OrderServiceImpl;
 
 import java.math.BigDecimal;
@@ -22,7 +23,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@Import(OrderServiceImpl.class)
+@Import({OrderServiceImpl.class, InventoryLogServiceImpl.class})
 class OrderServiceTest {
 
     @Autowired OrderService orderService;
@@ -35,8 +36,8 @@ class OrderServiceTest {
 
     @BeforeEach
     void setup() {
-        var buyer = userRepository.save(User.builder().username("buyer").passwordHash("x").roles(Set.of(Role.BUYER)).enabled(true).build());
-        var seller = userRepository.save(User.builder().username("seller").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
+        var buyer = userRepository.save(User.builder().username("buyer").email("buyer@test.com").passwordHash("x").roles(Set.of(Role.BUYER)).enabled(true).build());
+        var seller = userRepository.save(User.builder().username("seller").email("seller@test.com").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
         productId = productRepository.save(Product.builder().sku("SKU").name("P").price(BigDecimal.ONE).stockQuantity(1).seller(seller).build()).getId();
         cartItemRepository.save(CartItem.builder().buyer(buyer).product(productRepository.findById(productId).orElseThrow()).quantity(1).build());
     }

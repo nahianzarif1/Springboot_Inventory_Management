@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Seller</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <div class="h1">Seller workspace</div>
+    <p class="sub">Low stock (10 or below), recent inventory changes, and orders that include your products.</p>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="h1" style="font-size:18px;">Low stock alerts</div>
+        <p class="muted" th:if="${#lists.isEmpty(lowStock)}">No products at or below threshold.</p>
+        <table class="table" th:unless="${#lists.isEmpty(lowStock)}">
+            <thead><tr><th>Name</th><th>SKU</th><th>Stock</th></tr></thead>
+            <tbody>
+            <tr th:each="p : ${lowStock}">
+                <td th:text="${p.name}">n</td>
+                <td th:text="${p.sku}">s</td>
+                <td th:text="${p.stockQuantity}">0</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card" style="margin-bottom:16px;">
+        <div class="h1" style="font-size:18px;">Stock history (recent)</div>
+        <table class="table">
+            <thead>
+            <tr><th>When</th><th>Product</th><th>Old</th><th>New</th><th>By</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="h : ${history}">
+                <td th:text="${h.createdAt}">-</td>
+                <td th:text="${h.productName}">p</td>
+                <td th:text="${h.oldQuantity}">0</td>
+                <td th:text="${h.newQuantity}">0</td>
+                <td th:text="${h.changedByUsername}">u</td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <div class="h1" style="font-size:18px;">Orders with your products</div>
+        <table class="table">
+            <thead>
+            <tr><th>ID</th><th>Buyer</th><th>Status</th><th>Total</th><th>Items</th><th>Update</th></tr>
+            </thead>
+            <tbody>
+            <tr th:each="o : ${orders}">
+                <td th:text="${o.id}">1</td>
+                <td th:text="${o.buyerUsername}">b</td>
+                <td th:text="${o.status}">PENDING</td>
+                <td th:text="${o.totalPrice}">0</td>
+                <td>
+                    <ul class="muted stack" style="margin:0;padding-left:18px;">
+                        <li th:each="i : ${o.items}" th:text="${i.productName + ' x ' + i.quantity}">x</li>
+                    </ul>
+                </td>
+                <td>
+                    <form th:action="@{'/ui/seller/orders/' + ${o.id} + '/status'}" method="post" class="row-actions">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <select name="status">
+                            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
+                        </select>
+                        <button class="btn primary" type="submit">Set</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

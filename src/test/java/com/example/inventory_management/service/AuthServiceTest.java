@@ -24,7 +24,7 @@ class AuthServiceTest {
 
     @Test
     void registerBuyer_createsUserWithBuyerRole() {
-        var dto = authService.registerBuyer("newbuyer", "secret123");
+        var dto = authService.registerBuyer("newbuyer", "newbuyer@test.com", "secret123");
         User u = userRepository.findByUsernameIgnoreCase("newbuyer").orElseThrow();
         assertEquals(dto.id(), u.getId());
         assertTrue(u.getRoles().contains(Role.BUYER));
@@ -34,10 +34,11 @@ class AuthServiceTest {
     void registerBuyer_duplicateUsername_throws() {
         userRepository.save(User.builder()
                 .username("dup")
+                .email("dup@test.com")
                 .passwordHash("x")
                 .roles(Set.of(Role.BUYER))
                 .enabled(true)
                 .build());
-        assertThrows(ConflictException.class, () -> authService.registerBuyer("dup", "secret123"));
+        assertThrows(ConflictException.class, () -> authService.registerBuyer("dup", "other@test.com", "secret123"));
     }
 }

@@ -6,6 +6,8 @@ public record ProductDTO(
         Long id,
         String sku,
         String name,
+        String description,
+        String imageUrl,
         BigDecimal price,
         int stockQuantity,
         Long categoryId,

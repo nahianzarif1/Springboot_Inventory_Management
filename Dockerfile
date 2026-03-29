@@ -9,6 +9,8 @@ RUN ./mvnw -q -DskipTests package || true
 COPY src/ src/
 RUN ./mvnw -q -DskipTests package
 
+RUN mkdir -p /app/uploads/products
+
 EXPOSE 8080
 
 CMD ["java", "-jar", "target/Inventory_Management-0.0.1-SNAPSHOT.jar"]

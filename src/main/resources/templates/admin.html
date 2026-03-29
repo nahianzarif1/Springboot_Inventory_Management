@@ -1,45 +1,101 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
-    <meta charset="UTF-8">
-    <title>Admin</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Admin - Users</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
 </head>
 <body>
-<h2>Admin - Users</h2>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <div class="h1">User management</div>
+    <p class="sub">Create accounts, assign roles, enable or disable login, and remove users.</p>
 
-<table border="1" cellspacing="0" cellpadding="6">
-    <thead>
-    <tr>
-        <th>ID</th>
-        <th>Username</th>
-        <th>Roles</th>
-        <th>Enabled</th>
-        <th>Actions</th>
-    </tr>
-    </thead>
-    <tbody>
-    <tr th:each="u : ${users}">
-        <td th:text="${u.id}">1</td>
-        <td th:text="${u.username}">user</td>
-        <td th:text="${u.roles}">[BUYER]</td>
-        <td th:text="${u.enabled}">true</td>
-        <td>
-            <form th:action="@{'/ui/admin/users/' + ${u.id} + '/role'}" method="post">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                <select name="role">
-                    <option th:each="r : ${roles}" th:value="${r}" th:text="${r}"></option>
-                </select>
-                <button type="submit">Update Role</button>
-            </form>
-            <form th:action="@{'/ui/admin/users/' + ${u.id} + '/delete'}" method="post">
-                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                <button type="submit">Delete</button>
-            </form>
-        </td>
-    </tr>
-    </tbody>
-</table>
+    <div class="card" style="margin-bottom:16px;">
+        <div class="h1" style="font-size:20px;">Create user</div>
+        <form th:action="@{/ui/admin/users}" th:object="${createUser}" method="post" class="stack" style="max-width:640px;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <div class="input">
+                <label>Username</label>
+                <input type="text" th:field="*{username}" required/>
+            </div>
+            <div class="input">
+                <label>Email</label>
+                <input type="email" th:field="*{email}" required/>
+            </div>
+            <div class="input">
+                <label>Password</label>
+                <input type="password" th:field="*{password}" required/>
+            </div>
+            <div class="muted">Roles (leave unchecked for BUYER only)</div>
+            <label><input type="checkbox" name="roleChecks" value="BUYER"/> BUYER</label>
+            <label><input type="checkbox" name="roleChecks" value="SELLER"/> SELLER</label>
+            <label><input type="checkbox" name="roleChecks" value="ADMIN"/> ADMIN</label>
+            <button class="btn primary" type="submit">Create</button>
+        </form>
+    </div>
 
-<p><a th:href="@{/}">Home</a></p>
+    <div class="card">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Username</th>
+                <th>Email</th>
+                <th>Roles</th>
+                <th>Enabled</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="u : ${users}">
+                <td th:text="${u.id}">1</td>
+                <td th:text="${u.username}">user</td>
+                <td th:text="${u.email}">mail</td>
+                <td th:text="${u.roles}">[]</td>
+                <td th:text="${u.enabled}">true</td>
+                <td>
+                    <div class="stack">
+                        <form th:action="@{'/ui/admin/users/' + ${u.id} + '/update'}" method="post" class="row-actions">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="text" name="username" th:placeholder="${u.username}" style="width:120px;"/>
+                            <input type="email" name="email" th:placeholder="${u.email}" style="width:180px;"/>
+                            <button class="btn" type="submit">Save profile</button>
+                        </form>
+                        <form th:action="@{'/ui/admin/users/' + ${u.id} + '/enable'}" method="post" class="row-actions">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="enabled" th:value="${!u.enabled}"/>
+                            <button class="btn" type="submit" th:text="${u.enabled} ? 'Disable' : 'Enable'">Toggle</button>
+                        </form>
+                        <form th:action="@{'/ui/admin/users/' + ${u.id} + '/role'}" method="post" class="row-actions">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <select name="role">
+                                <option th:each="r : ${roles}" th:value="${r}" th:text="${r}"></option>
+                            </select>
+                            <button class="btn" type="submit">Set single role</button>
+                        </form>
+                        <form th:action="@{'/ui/admin/users/' + ${u.id} + '/roles'}" method="post" class="stack">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <span class="muted">Multi-role</span>
+                            <label th:each="r : ${roles}">
+                                <input type="checkbox" name="roles" th:value="${r}"/>
+                                <span th:text="${r}"></span>
+                            </label>
+                            <button class="btn primary" type="submit">Save roles</button>
+                        </form>
+                        <form th:action="@{'/ui/admin/users/' + ${u.id} + '/delete'}" method="post"
+                              onsubmit="return confirm('Delete user?');">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <button class="btn danger" type="submit">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
 </body>
 </html>

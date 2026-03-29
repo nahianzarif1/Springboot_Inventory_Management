@@ -1,8 +1,13 @@
 package com.example.inventory_management.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -27,7 +32,11 @@ public class Order {
     @Builder.Default
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
-    private OrderStatus status = OrderStatus.CREATED;
+    private OrderStatus status = OrderStatus.PENDING;
+
+    @Builder.Default
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal totalPrice = BigDecimal.ZERO;
 
     @Builder.Default
     @Column(nullable = false)

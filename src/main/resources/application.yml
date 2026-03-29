@@ -19,9 +19,17 @@ spring:
   thymeleaf:
     cache: false
 
+  servlet:
+    multipart:
+      max-file-size: 5MB
+      max-request-size: 6MB
+
 server:
   port: ${PORT:8080}
   shutdown: graceful
+
+app:
+  upload-dir: ${APP_UPLOAD_DIR:uploads/products}
 
 management:
   endpoints:

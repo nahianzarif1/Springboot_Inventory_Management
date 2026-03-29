@@ -6,6 +6,7 @@ import com.example.inventory_management.entity.User;
 import com.example.inventory_management.exception.ConflictException;
 import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.repository.UserRepository;
+import com.example.inventory_management.service.impl.InventoryLogServiceImpl;
 import com.example.inventory_management.service.impl.ProductServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +20,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@Import(ProductServiceImpl.class)
+@Import({ProductServiceImpl.class, InventoryLogServiceImpl.class})
 class ProductServiceAdditionalTest {
 
     @Autowired ProductService productService;
@@ -28,19 +29,19 @@ class ProductServiceAdditionalTest {
 
     @BeforeEach
     void setup() {
-        userRepository.save(User.builder().username("sellerX").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
+        userRepository.save(User.builder().username("sellerX").email("sellerX@test.com").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
     }
 
     @Test
     void createProduct_rejectsNegativeStock() {
         assertThrows(ConflictException.class,
-                () -> productService.createProduct(new ProductCreateRequest("SKU10", "P", BigDecimal.ONE, -1, null), "sellerX"));
+                () -> productService.createProduct(new ProductCreateRequest("SKU10", "P", null, BigDecimal.ONE, -1, null), "sellerX"));
     }
 
     @Test
     void deleteProduct_otherSeller_throws() {
-        var p = productService.createProduct(new ProductCreateRequest("SKU11", "P", BigDecimal.ONE, 1, null), "sellerX");
-        userRepository.save(User.builder().username("sellerY").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
+        var p = productService.createProduct(new ProductCreateRequest("SKU11", "P", null, BigDecimal.ONE, 1, null), "sellerX");
+        userRepository.save(User.builder().username("sellerY").email("sellerY@test.com").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
         assertThrows(ConflictException.class, () -> productService.deleteProduct(p.id(), "sellerY"));
     }
 }

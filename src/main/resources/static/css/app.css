@@ -62,3 +62,9 @@ body{
 .btn.danger{background:rgba(255,93,93,.14);border-color:rgba(255,93,93,.35)}
 .btn.success{background:rgba(43,213,118,.14);border-color:rgba(43,213,118,.35)}
 .footer{color:var(--muted);font-size:12px;margin-top:18px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.thumb{width:56px;height:56px;object-fit:cover;border-radius:10px;border:1px solid var(--border)}
+.grid-3{grid-template-columns: repeat(3, minmax(0,1fr))}
+@media (max-width: 900px){.grid-3{grid-template-columns:1fr}}
+.muted{color:var(--muted);font-size:13px}

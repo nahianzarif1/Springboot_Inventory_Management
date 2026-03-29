@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Admin - Inventory</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <div class="h1">Inventory (all products)</div>
+    <p class="sub">Adjust stock or remove listings. Changes are written to inventory logs.</p>
+
+    <div class="card">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>SKU</th>
+                <th>Name</th>
+                <th>Stock</th>
+                <th>Seller</th>
+                <th>Actions</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="p : ${products}">
+                <td th:text="${p.id}">1</td>
+                <td th:text="${p.sku}">sku</td>
+                <td th:text="${p.name}">name</td>
+                <td th:text="${p.stockQuantity}">0</td>
+                <td th:text="${p.sellerUsername}">seller</td>
+                <td>
+                    <form th:action="@{'/ui/admin/products/' + ${p.id} + '/stock'}" method="post" class="row-actions">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <input type="number" name="stock" th:value="${p.stockQuantity}" min="0" style="width:80px;"/>
+                        <button class="btn primary" type="submit">Set stock</button>
+                    </form>
+                    <form th:action="@{'/ui/admin/products/' + ${p.id} + '/delete'}" method="post"
+                          onsubmit="return confirm('Remove product from catalog?');">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button class="btn danger" type="submit">Remove</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

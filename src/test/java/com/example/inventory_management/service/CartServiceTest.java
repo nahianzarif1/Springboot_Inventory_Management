@@ -31,8 +31,8 @@ class CartServiceTest {
 
     @BeforeEach
     void setup() {
-        userRepository.save(User.builder().username("buyer").passwordHash("x").roles(Set.of(Role.BUYER)).enabled(true).build());
-        userRepository.save(User.builder().username("seller").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
+        userRepository.save(User.builder().username("buyer").email("buyer@test.com").passwordHash("x").roles(Set.of(Role.BUYER)).enabled(true).build());
+        userRepository.save(User.builder().username("seller").email("seller@test.com").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
         var seller = userRepository.findByUsernameIgnoreCase("seller").orElseThrow();
         Product p = Product.builder().sku("S1").name("N").price(BigDecimal.ONE).stockQuantity(2).seller(seller).build();
         productId = productRepository.save(p).getId();

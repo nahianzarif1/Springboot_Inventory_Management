@@ -17,10 +17,14 @@ services:
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: nahian12109019
       PORT: 8080
+      APP_UPLOAD_DIR: /app/uploads/products
     ports:
       - "${APP_PORT:-8080}:8080"
     depends_on:
       - db
+    volumes:
+      - app_uploads:/app/uploads/products
 
 volumes:
   pgdata:
+  app_uploads:

@@ -7,7 +7,6 @@ import com.example.inventory_management.entity.CartItem;
 import com.example.inventory_management.service.CartService;
 import com.example.inventory_management.service.OrderService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,11 +14,15 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/cart")
-@RequiredArgsConstructor
 public class CartController {
 
     private final CartService cartService;
     private final OrderService orderService;
+
+    public CartController(CartService cartService, OrderService orderService) {
+        this.cartService = cartService;
+        this.orderService = orderService;
+    }
 
     @PostMapping("/add")
     public void add(@Valid @RequestBody AddToCartRequest request, Authentication authentication) {

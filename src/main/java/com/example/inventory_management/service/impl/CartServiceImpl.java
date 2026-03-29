@@ -10,19 +10,26 @@ import com.example.inventory_management.repository.CartItemRepository;
 import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.repository.UserRepository;
 import com.example.inventory_management.service.CartService;
-import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 public class CartServiceImpl implements CartService {
 
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+
+    public CartServiceImpl(
+            CartItemRepository cartItemRepository,
+            UserRepository userRepository,
+            ProductRepository productRepository) {
+        this.cartItemRepository = cartItemRepository;
+        this.userRepository = userRepository;
+        this.productRepository = productRepository;
+    }
 
     @Override
     @Transactional
@@ -60,6 +67,25 @@ public class CartServiceImpl implements CartService {
             throw new InsufficientStockException("Cannot add more than available stock");
         }
         item.setQuantity(newQty);
+    }
+
+    @Override
+    @Transactional
+    public void updateQuantity(String buyerUsername, long productId, int quantity) {
+        if (quantity <= 0) {
+            removeFromCart(buyerUsername, productId);
+            return;
+        }
+        User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+        CartItem item = cartItemRepository.findByBuyerIdAndProductId(buyer.getId(), productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cart item not found"));
+        if (quantity > product.getStockQuantity()) {
+            throw new InsufficientStockException("Cannot set quantity above available stock");
+        }
+        item.setQuantity(quantity);
     }
 
     @Override

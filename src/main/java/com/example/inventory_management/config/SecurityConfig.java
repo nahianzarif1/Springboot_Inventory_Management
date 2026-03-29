@@ -2,7 +2,6 @@ package com.example.inventory_management.config;
 
 import com.example.inventory_management.entity.Role;
 import com.example.inventory_management.repository.UserRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -17,10 +16,13 @@ import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
 @EnableMethodSecurity
-@RequiredArgsConstructor
 public class SecurityConfig {
 
     private final UserRepository userRepository;
+
+    public SecurityConfig(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
 
     @Bean
     UserDetailsService userDetailsService() {
@@ -48,18 +50,28 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.ignoringRequestMatchers("/auth/**", "/products/**", "/orders/**", "/cart/**", "/admin/**"))
+                .csrf(csrf -> csrf.ignoringRequestMatchers("/auth/**", "/products/**", "/orders/**", "/cart/**", "/admin/**", "/seller/**"))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/auth/register", "/css/**", "/js/**", "/images/**", "/webjars/**").permitAll()
+                        .requestMatchers("/", "/login", "/register", "/auth/register",
+                                "/css/**", "/js/**", "/images/**", "/webjars/**", "/uploads/**").permitAll()
 
-                        // Public product browsing
+                        // Public product browsing (REST + UI)
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/products/**", "/ui/products").permitAll()
 
-                        // UI access rules
-                        .requestMatchers("/ui/admin").hasRole("ADMIN")
-                        .requestMatchers("/ui/cart", "/ui/orders").hasRole("BUYER")
+                        // Buyer cart; orders visible to buyers and admins
+                        .requestMatchers("/ui/cart/**").hasRole("BUYER")
+                        .requestMatchers("/ui/orders", "/ui/orders/**").hasAnyRole("BUYER", "ADMIN")
 
-                        // Role-based routes
+                        // Admin UI & reports
+                        .requestMatchers("/ui/admin/**", "/ui/reports").hasRole("ADMIN")
+
+                        // Seller dashboard
+                        .requestMatchers("/ui/seller/**").hasRole("SELLER")
+
+                        // Authenticated UI (create/update products from catalog)
+                        .requestMatchers(org.springframework.http.HttpMethod.POST, "/ui/products", "/ui/products/**").authenticated()
+
+                        // Role-based REST
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/seller/**").hasRole("SELLER")
                         .requestMatchers("/buyer/**").hasRole("BUYER")

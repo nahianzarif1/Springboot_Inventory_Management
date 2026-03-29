@@ -4,6 +4,7 @@ import com.example.inventory_management.entity.*;
 import com.example.inventory_management.exception.ConflictException;
 import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.repository.UserRepository;
+import com.example.inventory_management.service.impl.InventoryLogServiceImpl;
 import com.example.inventory_management.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@Import(OrderServiceImpl.class)
+@Import({OrderServiceImpl.class, InventoryLogServiceImpl.class})
 class OrderServiceAdditionalTest {
 
     @Autowired OrderService orderService;
@@ -29,9 +30,9 @@ class OrderServiceAdditionalTest {
 
     @BeforeEach
     void setup() {
-        var buyer1 = userRepository.save(User.builder().username("buyer1").passwordHash("x").roles(Set.of(Role.BUYER)).enabled(true).build());
-        var buyer2 = userRepository.save(User.builder().username("buyer2").passwordHash("x").roles(Set.of(Role.BUYER)).enabled(true).build());
-        var seller = userRepository.save(User.builder().username("seller1").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
+        var buyer1 = userRepository.save(User.builder().username("buyer1").email("b1@test.com").passwordHash("x").roles(Set.of(Role.BUYER)).enabled(true).build());
+        var buyer2 = userRepository.save(User.builder().username("buyer2").email("b2@test.com").passwordHash("x").roles(Set.of(Role.BUYER)).enabled(true).build());
+        var seller = userRepository.save(User.builder().username("seller1").email("s1@test.com").passwordHash("x").roles(Set.of(Role.SELLER)).enabled(true).build());
         productId = productRepository.save(Product.builder().sku("SKU20").name("P").price(BigDecimal.ONE).stockQuantity(2).seller(seller).build()).getId();
         orderService.createOrder(buyer1.getUsername(), List.of(new OrderService.CreateItem(productId, 1)));
     }

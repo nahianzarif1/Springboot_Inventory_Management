@@ -27,7 +27,7 @@ class OrderControllerIT {
     @BeforeEach
     void setup() {
         userRepository.findByUsernameIgnoreCase("buyerOrderIT").orElseGet(() -> userRepository.save(User.builder()
-                .username("buyerOrderIT").passwordHash(encoder.encode("pw")).roles(Set.of(Role.BUYER)).enabled(true).build()));
+                .username("buyerOrderIT").email("buyerOrderIT@test.com").passwordHash(encoder.encode("pw")).roles(Set.of(Role.BUYER)).enabled(true).build()));
     }
 
     @Test

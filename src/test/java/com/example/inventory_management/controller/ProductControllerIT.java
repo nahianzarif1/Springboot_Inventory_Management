@@ -32,6 +32,7 @@ class ProductControllerIT {
         userRepository.findByUsernameIgnoreCase("sellerIT").orElseGet(() ->
                 userRepository.save(User.builder()
                         .username("sellerIT")
+                        .email("sellerIT@test.com")
                         .passwordHash(passwordEncoder.encode("pw"))
                         .roles(Set.of(Role.SELLER))
                         .enabled(true)

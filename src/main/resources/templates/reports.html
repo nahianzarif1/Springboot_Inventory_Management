@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Reports</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <div class="h1">Reports</div>
+    <p class="sub">Sales exclude canceled orders.</p>
+    <div class="card" style="margin-bottom:16px;">
+        <div class="label">Total sales</div>
+        <div class="value" th:text="${totalSales}">0</div>
+    </div>
+    <div class="grid grid-2">
+        <div class="card">
+            <div class="h1" style="font-size:18px;">Top products</div>
+            <table class="table">
+                <thead><tr><th>Product</th><th>Units</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${topProducts}">
+                    <td th:text="${row.productName}">P</td>
+                    <td th:text="${row.unitsSold}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="card">
+            <div class="h1" style="font-size:18px;">Seller performance</div>
+            <table class="table">
+                <thead><tr><th>Seller</th><th>Revenue</th></tr></thead>
+                <tbody>
+                <tr th:each="row : ${sellerPerformance}">
+                    <td th:text="${row.sellerUsername}">S</td>
+                    <td th:text="${row.revenue}">0</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+</body>
+</html>

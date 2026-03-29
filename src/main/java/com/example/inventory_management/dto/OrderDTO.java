@@ -2,6 +2,7 @@ package com.example.inventory_management.dto;
 
 import com.example.inventory_management.entity.OrderStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 
@@ -11,7 +12,8 @@ public record OrderDTO(
         String buyerUsername,
         OrderStatus status,
         Instant createdAt,
+        BigDecimal totalPrice,
         List<OrderItemDTO> items
 ) {
-    public record OrderItemDTO(Long productId, String productName, int quantity) {}
+    public record OrderItemDTO(Long productId, String productName, int quantity, BigDecimal unitPrice) {}
 }

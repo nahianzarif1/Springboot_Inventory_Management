@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Register</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <div class="h1">Create buyer account</div>
+    <p class="sub">New accounts receive the <strong>BUYER</strong> role. Already have an account? <a th:href="@{/login}">Sign in</a>.</p>
+
+    <div class="card" style="max-width:520px;">
+        <form th:action="@{/register}" th:object="${form}" method="post" class="stack">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <div class="input">
+                <label>Username</label>
+                <input type="text" th:field="*{username}" required/>
+                <span class="muted" th:if="${#fields.hasErrors('username')}" th:errors="*{username}"></span>
+            </div>
+            <div class="input">
+                <label>Email</label>
+                <input type="email" th:field="*{email}" required/>
+                <span class="muted" th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></span>
+            </div>
+            <div class="input">
+                <label>Password</label>
+                <input type="password" th:field="*{password}" required/>
+                <span class="muted" th:if="${#fields.hasErrors('password')}" th:errors="*{password}"></span>
+            </div>
+            <button class="btn primary" type="submit">Register</button>
+        </form>
+    </div>
+</main>
+</body>
+</html>

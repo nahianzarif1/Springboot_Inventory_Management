@@ -1,7 +1,11 @@
 package com.example.inventory_management.entity;
 
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 
@@ -25,6 +29,12 @@ public class Product {
 
     @Column(nullable = false, length = 160)
     private String name;
+
+    @Column(length = 2000)
+    private String description;
+
+    @Column(length = 500)
+    private String imageUrl;
 
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal price;

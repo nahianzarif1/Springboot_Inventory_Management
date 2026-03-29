@@ -6,7 +6,6 @@ import com.example.inventory_management.dto.order.UpdateOrderStatusRequest;
 import com.example.inventory_management.entity.OrderStatus;
 import com.example.inventory_management.service.OrderService;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -16,10 +15,13 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/orders")
-@RequiredArgsConstructor
 public class OrderController {
 
     private final OrderService orderService;
+
+    public OrderController(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     @PostMapping
     public OrderDTO create(@Valid @RequestBody(required = false) CreateOrderRequest request, Authentication authentication) {
@@ -45,6 +47,18 @@ public class OrderController {
     public OrderDTO updateStatus(@PathVariable long id, @Valid @RequestBody UpdateOrderStatusRequest request) {
         OrderStatus status = request.status();
         return orderService.updateStatus(id, status);
+    }
+
+    @PutMapping("/{id}/status/seller")
+    @PreAuthorize("hasRole('SELLER')")
+    public OrderDTO updateStatusSeller(@PathVariable long id, @Valid @RequestBody UpdateOrderStatusRequest request,
+                                       Authentication authentication) {
+        return orderService.updateStatusForSeller(id, request.status(), authentication.getName());
+    }
+
+    @PostMapping("/{id}/cancel")
+    public OrderDTO cancel(@PathVariable long id, Authentication authentication) {
+        return orderService.cancelOrder(id, authentication.getName());
     }
 
     private boolean isAdmin(Authentication authentication) {

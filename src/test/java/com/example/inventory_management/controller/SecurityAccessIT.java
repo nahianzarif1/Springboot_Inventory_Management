@@ -27,9 +27,9 @@ class SecurityAccessIT {
     @BeforeEach
     void setup() {
         userRepository.findByUsernameIgnoreCase("adminIT").orElseGet(() -> userRepository.save(User.builder()
-                .username("adminIT").passwordHash(encoder.encode("pw")).roles(Set.of(Role.ADMIN)).enabled(true).build()));
+                .username("adminIT").email("adminIT@test.com").passwordHash(encoder.encode("pw")).roles(Set.of(Role.ADMIN)).enabled(true).build()));
         userRepository.findByUsernameIgnoreCase("buyerIT").orElseGet(() -> userRepository.save(User.builder()
-                .username("buyerIT").passwordHash(encoder.encode("pw")).roles(Set.of(Role.BUYER)).enabled(true).build()));
+                .username("buyerIT").email("buyerIT@test.com").passwordHash(encoder.encode("pw")).roles(Set.of(Role.BUYER)).enabled(true).build()));
     }
 
     @Test
