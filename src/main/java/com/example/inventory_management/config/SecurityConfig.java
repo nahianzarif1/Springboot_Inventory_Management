@@ -13,6 +13,8 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 
 @Configuration
 @EnableMethodSecurity
@@ -49,6 +51,8 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        HttpSessionRequestCache requestCache = new HttpSessionRequestCache();
+
         http
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/auth/**", "/products/**", "/orders/**", "/cart/**", "/admin/**", "/seller/**"))
                 .authorizeHttpRequests(auth -> auth
@@ -84,6 +88,27 @@ public class SecurityConfig {
                 .formLogin(form -> form
                         .loginPage("/login")
                         .permitAll()
+                        .successHandler((request, response, authentication) -> {
+                            SavedRequest saved = requestCache.getRequest(request, response);
+                            if (saved != null) {
+                                response.sendRedirect(saved.getRedirectUrl());
+                                return;
+                            }
+
+                            boolean isAdmin = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+                            boolean isSeller = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_SELLER"));
+                            boolean isBuyer = authentication.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_BUYER"));
+
+                            if (isAdmin) {
+                                response.sendRedirect("/ui/admin");
+                            } else if (isSeller) {
+                                response.sendRedirect("/ui/seller");
+                            } else if (isBuyer) {
+                                response.sendRedirect("/ui/products");
+                            } else {
+                                response.sendRedirect("/");
+                            }
+                        })
                 )
                 .logout(logout -> logout.logoutUrl("/auth/logout"));
 
