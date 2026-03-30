@@ -43,6 +43,34 @@ body{
 .nav .nav-links a:hover{background: rgba(255,255,255,.14); color:#fff}
 .nav .btn{background: rgba(255,255,255,.14); border-color: rgba(255,255,255,.24); color:#fff}
 
+.nav-links{
+  display:flex;
+  gap: 18px; /* more space between items */
+  flex-wrap:wrap;
+  align-items:center;
+}
+
+.nav-links a{
+  text-decoration:none; /* remove always-underline */
+  border-bottom: 2px solid transparent;
+  transition: background .12s ease, border-color .12s ease, transform .05s ease;
+}
+
+.nav-links a:hover{
+  border-bottom-color: rgba(255,255,255,.75);
+}
+
+.nav-links a:active{
+  transform: translateY(1px);
+  border-bottom-color: #ffffff;
+}
+
+.nav-links a:focus-visible{
+  outline: 3px solid rgba(255,255,255,.35);
+  outline-offset: 2px;
+  border-radius: 10px;
+}
+
 .hero{
   background:
     linear-gradient(90deg, rgba(248,86,6,.15), rgba(26,115,232,.10)),

@@ -31,4 +31,6 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             ORDER BY COALESCE(SUM(i.quantity * i.unitPrice), 0) DESC
             """)
     List<Object[]> sellerPerformance(@Param("canceled") OrderStatus canceled);
+
+    boolean existsByProductId(Long productId);
 }
