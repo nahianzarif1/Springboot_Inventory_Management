@@ -10,51 +10,81 @@
 <div th:replace="~{fragments/nav :: nav}"></div>
 <div th:replace="~{fragments/nav :: alerts}"></div>
 <main class="container">
-    <div class="h1">Dashboard</div>
-    <p class="sub">Browse products publicly, then sign in as buyer, seller, or admin to use role-specific tools.</p>
 
-    <div class="grid grid-2">
-        <div class="card">
-            <div class="kpi">
-                <div>
-                    <div class="label">Catalog</div>
-                    <div class="value">Products</div>
-                </div>
-                <span class="badge success">Live</span>
+    <section class="hero">
+        <div class="h1" style="margin-top:0;">Dashboard</div>
+        <p class="sub" style="max-width: 820px;">
+            Track inventory, shop from the catalog, and manage orders with role-based access.
+        </p>
+        <div class="row-actions" style="margin-top:10px;">
+            <a class="btn accent" th:href="@{/ui/products}">Browse catalog</a>
+            <a class="btn" th:href="@{/login}" sec:authorize="!isAuthenticated()">Sign in</a>
+        </div>
+    </section>
+
+    <div style="height:14px;"></div>
+
+    <section class="card">
+        <div class="kpi">
+            <div>
+                <div class="label">Catalog preview</div>
+                <div class="value">Low stock</div>
             </div>
-            <p class="muted" style="margin:12px 0 0;">Search, filter by category, and add items when you are signed in as a seller.</p>
-            <div style="margin-top:12px;">
-                <a class="btn primary" th:href="@{/ui/products}">Open products</a>
+            <span class="badge warn">Restock soon</span>
+        </div>
+        <p class="muted" style="margin:12px 0 14px;">Products running low (≤ 10 units). This helps sellers prioritize restocking.</p>
+
+        <div class="product-grid" style="grid-template-columns: repeat(4, minmax(0, 1fr));" th:if="${lowStockProducts != null && !#lists.isEmpty(lowStockProducts)}">
+            <div class="product-card" th:each="p : ${lowStockProducts}">
+                <img class="product-card__img" th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" alt=""/>
+                <div class="product-card__img" th:unless="${p.imageUrl != null}"></div>
+                <div class="product-card__body">
+                    <div class="product-card__name" th:text="${p.name}">Name</div>
+                    <div class="product-card__meta">SKU: <span th:text="${p.sku}">SKU</span></div>
+                    <div class="product-card__price">৳ <span th:text="${p.price}">0</span></div>
+                    <div class="badge warn" style="align-self:flex-start;">Stock: <span th:text="${p.stockQuantity}">0</span></div>
+                </div>
             </div>
         </div>
-        <div class="card">
-            <div class="kpi">
-                <div>
-                    <div class="label">Roles</div>
-                    <div class="value">RBAC</div>
-                </div>
-                <span class="badge warn">Spring Security</span>
-            </div>
-            <ul class="muted stack" style="margin:12px 0 0;">
-                <li><strong>Admin</strong> - users, inventory, reports, all orders</li>
-                <li><strong>Seller</strong> - own products, stock history, related orders</li>
-                <li><strong>Buyer</strong> - cart, checkout, order history and cancel</li>
-            </ul>
+        <div class="muted" th:if="${lowStockProducts == null || #lists.isEmpty(lowStockProducts)}">
+            No low-stock products found yet.
         </div>
-    </div>
+    </section>
 
-    <div class="card" style="margin-top:16px;">
+    <div style="height:14px;"></div>
+
+    <section class="tile-grid">
+        <div class="tile">
+            <div class="title">Admin</div>
+            <div class="desc">Manage users, roles, products, and reports.</div>
+        </div>
+        <div class="tile">
+            <div class="title">Seller</div>
+            <div class="desc">Create listings, update stock, and upload product images.</div>
+        </div>
+        <div class="tile">
+            <div class="title">Buyer</div>
+            <div class="desc">Add items to cart, checkout, and track orders.</div>
+        </div>
+    </section>
+
+    <div style="height:14px;"></div>
+
+    <section class="card" style="max-width:560px;">
         <div class="kpi">
             <div>
                 <div class="label">Demo accounts</div>
-                <div class="value">Seeded</div>
+                <div class="value">Try now</div>
             </div>
         </div>
-        <p class="muted" style="margin:12px 0 0;">
-            admin / admin123, seller / seller123, buyer / buyer123
-        </p>
-    </div>
+        <div class="muted" style="margin-top:10px; line-height: 1.8;">
+            <div><strong>admin</strong> / admin123</div>
+            <div><strong>seller</strong> / seller123</div>
+            <div><strong>buyer</strong> / buyer123</div>
+        </div>
+    </section>
+
 </main>
-<div class="container footer">Inventory Management, PostgreSQL, Spring Boot 3</div>
+<div class="container footer">Inventory Management • PostgreSQL • Spring Boot 3</div>
 </body>
 </html>
