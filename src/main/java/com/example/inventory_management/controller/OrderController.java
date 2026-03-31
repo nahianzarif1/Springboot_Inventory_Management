@@ -61,6 +61,14 @@ public class OrderController {
         return orderService.cancelOrder(id, authentication.getName());
     }
 
+    /**
+     * Demo payment method: marks a PENDING order as PAID (no real gateway).
+     */
+    @PostMapping("/{id}/pay/demo")
+    public OrderDTO payDemo(@PathVariable long id, Authentication authentication) {
+        return orderService.payDemo(id, authentication.getName());
+    }
+
     private boolean isAdmin(Authentication authentication) {
         for (GrantedAuthority a : authentication.getAuthorities()) {
             if ("ROLE_ADMIN".equals(a.getAuthority())) {
