@@ -46,6 +46,15 @@
                 </div>
                 <div class="product-card__price">৳ <span th:text="${p.price}">0</span></div>
                 <div class="product-card__meta">SKU: <span th:text="${p.sku}">SKU</span> • Stock: <span th:text="${p.stockQuantity}">0</span></div>
+                <div class="product-card__meta">
+                    Rating:
+                    <span th:text="${#numbers.formatDecimal(p.averageRating, 1, 1)}">0.0</span>
+                    <span class="muted">(<span th:text="${p.reviewCount}">0</span> reviews)</span>
+                    <span> • </span>
+                    <a th:href="@{'/ui/products/' + ${p.id} + '/reviews'}" style="color: var(--accent); text-decoration:none; font-weight:800;">
+                        View
+                    </a>
+                </div>
 
                 <div class="product-card__actions" sec:authorize="hasRole('BUYER')">
                     <form th:action="@{/ui/cart/add}" method="post" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">

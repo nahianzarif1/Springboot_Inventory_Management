@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Product reviews</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <a th:href="@{/ui/products}" class="muted" style="text-decoration:none;">← Back to products</a>
+
+    <div class="h1" style="margin-top:10px;" th:text="${product.name}">Product</div>
+    <p class="sub">
+        Avg rating:
+        <b th:text="${#numbers.formatDecimal(summary.averageRating, 1, 1)}">0.0</b>
+        <span class="muted">(<span th:text="${summary.reviewCount}">0</span> reviews)</span>
+    </p>
+
+    <div class="card" sec:authorize="hasRole('BUYER')">
+        <div class="h1" style="font-size:18px;">Write / update your review</div>
+        <p class="sub" style="margin-top:6px;">You can review a product only after you have paid for an order containing it.</p>
+        <form th:action="@{'/ui/products/' + ${product.id} + '/reviews'}" method="post" class="stack" style="max-width:620px;">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <div class="input">
+                <label>Rating (1-5)</label>
+                <input type="number" name="rating" min="1" max="5" required th:value="${myReview != null ? myReview.rating : 5}"/>
+            </div>
+            <div class="input">
+                <label>Comment (optional)</label>
+                <input type="text" name="comment" maxlength="2000" th:value="${myReview != null ? myReview.comment : ''}"/>
+            </div>
+            <button class="btn primary" type="submit">Save review</button>
+        </form>
+    </div>
+
+    <div class="card" style="margin-top:16px;">
+        <div class="h1" style="font-size:18px;">All reviews</div>
+        <p class="sub" style="margin-top:6px;" th:if="${#lists.isEmpty(reviews)}">No reviews yet.</p>
+        <table class="table" th:if="${!#lists.isEmpty(reviews)}">
+            <thead>
+            <tr>
+                <th>Buyer</th>
+                <th>Rating</th>
+                <th>Comment</th>
+                <th>Created</th>
+                <th sec:authorize="isAuthenticated()">Manage</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="r : ${reviews}">
+                <td th:text="${r.buyerUsername}">buyer</td>
+                <td th:text="${r.rating}">5</td>
+                <td th:text="${r.comment} ?: '—'">comment</td>
+                <td th:text="${r.createdAt}">-</td>
+                <td sec:authorize="isAuthenticated()">
+                    <form th:if="${admin || (me != null && me == r.buyerUsername)}"
+                          th:action="@{'/ui/products/' + ${product.id} + '/reviews/' + ${r.id} + '/delete'}"
+                          method="post"
+                          onsubmit="return confirm('Delete this review?');">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <button class="btn danger" type="submit">Delete</button>
+                    </form>
+                    <span class="muted" th:unless="${admin || (me != null && me == r.buyerUsername)}">—</span>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>
+

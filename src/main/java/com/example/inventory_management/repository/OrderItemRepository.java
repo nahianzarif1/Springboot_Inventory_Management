@@ -31,4 +31,15 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             ORDER BY COALESCE(SUM(i.quantity * i.unitPrice), 0) DESC
             """)
     List<Object[]> sellerPerformance(@Param("canceled") OrderStatus canceled);
+
+    @Query("""
+            SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
+            FROM OrderItem i JOIN i.order o
+            WHERE LOWER(o.buyer.username) = LOWER(:buyerUsername)
+              AND i.product.id = :productId
+              AND o.status IN :eligibleStatuses
+            """)
+    boolean buyerHasPurchasedProduct(@Param("buyerUsername") String buyerUsername,
+                                    @Param("productId") long productId,
+                                    @Param("eligibleStatuses") List<OrderStatus> eligibleStatuses);
 }

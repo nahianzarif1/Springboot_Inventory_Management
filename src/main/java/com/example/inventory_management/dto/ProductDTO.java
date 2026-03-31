@@ -13,6 +13,8 @@ public record ProductDTO(
         Long categoryId,
         String categoryName,
         Long sellerId,
-        String sellerUsername
+        String sellerUsername,
+        Double averageRating,
+        long reviewCount
 ) {
 }

@@ -13,6 +13,7 @@ import com.example.inventory_management.exception.ResourceNotFoundException;
 import com.example.inventory_management.repository.CategoryRepository;
 import com.example.inventory_management.repository.InventoryLogRepository;
 import com.example.inventory_management.repository.ProductRepository;
+import com.example.inventory_management.repository.ProductReviewRepository;
 import com.example.inventory_management.repository.UserRepository;
 import com.example.inventory_management.service.InventoryLogService;
 import com.example.inventory_management.service.ProductService;
@@ -43,18 +44,21 @@ public class ProductServiceImpl implements ProductService {
     private final UserRepository userRepository;
     private final InventoryLogService inventoryLogService;
     private final InventoryLogRepository inventoryLogRepository;
+    private final ProductReviewRepository productReviewRepository;
 
     public ProductServiceImpl(
             ProductRepository productRepository,
             CategoryRepository categoryRepository,
             UserRepository userRepository,
             InventoryLogService inventoryLogService,
-            InventoryLogRepository inventoryLogRepository) {
+            InventoryLogRepository inventoryLogRepository,
+            ProductReviewRepository productReviewRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.inventoryLogService = inventoryLogService;
         this.inventoryLogRepository = inventoryLogRepository;
+        this.productReviewRepository = productReviewRepository;
     }
 
     private static String descOrEmpty(String d) {
@@ -269,6 +273,9 @@ public class ProductServiceImpl implements ProductService {
         Long sellerId = p.getSeller() != null ? p.getSeller().getId() : null;
         String sellerUsername = p.getSeller() != null ? p.getSeller().getUsername() : null;
 
+        Double avg = productReviewRepository.averageRating(p.getId());
+        long count = productReviewRepository.reviewCount(p.getId());
+
         return new ProductDTO(
                 p.getId(),
                 p.getSku(),
@@ -280,7 +287,9 @@ public class ProductServiceImpl implements ProductService {
                 categoryId,
                 categoryName,
                 sellerId,
-                sellerUsername
+                sellerUsername,
+                avg != null ? avg : 0.0,
+                count
         );
     }
 }
