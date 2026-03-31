@@ -3,14 +3,19 @@ package com.example.inventory_management.controller;
 import com.example.inventory_management.dto.cart.CartItemDTO;
 import com.example.inventory_management.dto.product.ProductCreateRequest;
 import com.example.inventory_management.dto.product.ProductUpdateRequest;
+import com.example.inventory_management.dto.review.CreateProductReviewRequest;
 import com.example.inventory_management.dto.user.AdminUserCreateRequest;
 import com.example.inventory_management.dto.user.AdminUserUpdateRequest;
 import com.example.inventory_management.entity.OrderStatus;
 import com.example.inventory_management.entity.Role;
+import com.example.inventory_management.repository.ProductReviewRepository;
 import com.example.inventory_management.repository.CategoryRepository;
+import com.example.inventory_management.repository.ProductRepository;
+import com.example.inventory_management.repository.UserRepository;
 import com.example.inventory_management.service.CartService;
 import com.example.inventory_management.service.OrderService;
 import com.example.inventory_management.service.ProductService;
+import com.example.inventory_management.service.ProductReviewService;
 import com.example.inventory_management.service.ReportService;
 import com.example.inventory_management.service.UserService;
 import jakarta.validation.Valid;
@@ -45,6 +50,10 @@ public class UiController {
     private final UserService userService;
     private final ReportService reportService;
     private final CategoryRepository categoryRepository;
+    private final ProductRepository productRepository;
+    private final ProductReviewService productReviewService;
+    private final ProductReviewRepository productReviewRepository;
+    private final UserRepository userRepository;
 
     public UiController(
             ProductService productService,
@@ -52,13 +61,21 @@ public class UiController {
             OrderService orderService,
             UserService userService,
             ReportService reportService,
-            CategoryRepository categoryRepository) {
+            CategoryRepository categoryRepository,
+            ProductRepository productRepository,
+            ProductReviewService productReviewService,
+            ProductReviewRepository productReviewRepository,
+            UserRepository userRepository) {
         this.productService = productService;
         this.cartService = cartService;
         this.orderService = orderService;
         this.userService = userService;
         this.reportService = reportService;
         this.categoryRepository = categoryRepository;
+        this.productRepository = productRepository;
+        this.productReviewService = productReviewService;
+        this.productReviewRepository = productReviewRepository;
+        this.userRepository = userRepository;
     }
 
     @GetMapping("/products")
@@ -73,6 +90,63 @@ public class UiController {
         model.addAttribute("createForm", new ProductForm());
         return "products";
     }
+
+    @GetMapping("/products/{id}/reviews")
+    public String productReviews(@PathVariable long id, Authentication authentication, Model model) {
+        var product = productRepository.findById(id)
+                .orElseThrow(() -> new com.example.inventory_management.exception.ResourceNotFoundException("Product not found"));
+
+        Double avg = productReviewRepository.averageRating(product.getId());
+        long count = productReviewRepository.reviewCount(product.getId());
+        model.addAttribute("summary", new ReviewSummary(avg != null ? avg : 0.0, count));
+
+        var reviews = productReviewService.listForProduct(id);
+        model.addAttribute("reviews", reviews);
+        model.addAttribute("product", product);
+
+        String me = authentication != null ? authentication.getName() : null;
+        boolean admin = authentication != null && authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        model.addAttribute("me", me);
+        model.addAttribute("admin", admin);
+
+        if (me != null) {
+            var buyer = userRepository.findByUsernameIgnoreCase(me).orElse(null);
+            if (buyer != null) {
+                var my = reviews.stream()
+                        .filter(r -> r.buyerUsername() != null && r.buyerUsername().equalsIgnoreCase(me))
+                        .findFirst()
+                        .orElse(null);
+                model.addAttribute("myReview", my);
+            }
+        }
+
+        return "product_reviews";
+    }
+
+    @PostMapping("/products/{id}/reviews")
+    @PreAuthorize("hasRole('BUYER')")
+    public String saveProductReview(@PathVariable long id,
+                                    @RequestParam int rating,
+                                    @RequestParam(required = false) String comment,
+                                    Authentication authentication,
+                                    RedirectAttributes redirectAttributes) {
+        productReviewService.createOrUpdate(id, authentication.getName(), new CreateProductReviewRequest(rating, comment));
+        redirectAttributes.addFlashAttribute("message", "Review saved");
+        return "redirect:/ui/products/" + id + "/reviews";
+    }
+
+    @PostMapping("/products/{productId}/reviews/{reviewId}/delete")
+    public String deleteProductReview(@PathVariable long productId,
+                                      @PathVariable long reviewId,
+                                      Authentication authentication,
+                                      RedirectAttributes redirectAttributes) {
+        boolean admin = authentication != null && authentication.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        productReviewService.delete(productId, reviewId, authentication.getName(), admin);
+        redirectAttributes.addFlashAttribute("message", "Review deleted");
+        return "redirect:/ui/products/" + productId + "/reviews";
+    }
+
+    public record ReviewSummary(double averageRating, long reviewCount) {}
 
     @PostMapping("/products")
     @PreAuthorize("hasAnyRole('SELLER','ADMIN')")

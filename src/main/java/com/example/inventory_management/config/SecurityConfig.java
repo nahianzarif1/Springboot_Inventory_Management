@@ -60,7 +60,7 @@ public class SecurityConfig {
                                 "/css/**", "/js/**", "/images/**", "/webjars/**", "/uploads/**").permitAll()
 
                         // Public product browsing (REST + UI)
-                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/products/**", "/ui/products").permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/products/**", "/ui/products", "/ui/products/**").permitAll()
 
                         // Buyer cart; orders visible to buyers and admins
                         .requestMatchers("/ui/cart/**").hasRole("BUYER")
