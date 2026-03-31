@@ -106,6 +106,32 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    @Transactional
+    public OrderDTO payDemo(long orderId, String buyerUsername) {
+        Order o = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        if (!o.getBuyer().getUsername().equalsIgnoreCase(buyerUsername)) {
+            throw new ConflictException("Cannot pay another user's order");
+        }
+        if (o.getStatus() == OrderStatus.CANCELED) {
+            throw new ConflictException("Cannot pay a canceled order");
+        }
+        if (o.getStatus() == OrderStatus.SHIPPED) {
+            throw new ConflictException("Order already shipped");
+        }
+        if (o.getStatus() == OrderStatus.PAID) {
+            throw new ConflictException("Order already paid");
+        }
+        if (o.getStatus() != OrderStatus.PENDING) {
+            throw new ConflictException("Order is not payable");
+        }
+
+        o.setStatus(OrderStatus.PAID);
+        return toDto(o);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public List<OrderDTO> listOrders(String buyerUsername, boolean admin) {
         if (admin) {

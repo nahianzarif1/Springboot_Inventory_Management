@@ -10,6 +10,8 @@ public interface OrderService {
 
     OrderDTO createOrder(String buyerUsername, List<CreateItem> items);
 
+    OrderDTO payDemo(long orderId, String buyerUsername);
+
     List<OrderDTO> listOrders(String buyerUsername, boolean admin);
 
     List<OrderDTO> listOrdersForSeller(String sellerUsername);
