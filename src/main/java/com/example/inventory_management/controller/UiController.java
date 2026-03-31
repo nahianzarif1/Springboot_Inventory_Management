@@ -181,6 +181,15 @@ public class UiController {
         return "redirect:/ui/orders";
     }
 
+    @PostMapping("/orders/{id}/pay-demo")
+    @PreAuthorize("hasRole('BUYER')")
+    public String payDemo(@PathVariable long id, Authentication authentication,
+                          RedirectAttributes redirectAttributes) {
+        orderService.payDemo(id, authentication.getName());
+        redirectAttributes.addFlashAttribute("message", "Demo payment successful");
+        return "redirect:/ui/orders";
+    }
+
     @GetMapping("/seller")
     @PreAuthorize("hasRole('SELLER')")
     @Transactional(readOnly = true)
