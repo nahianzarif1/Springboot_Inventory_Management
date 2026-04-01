@@ -167,7 +167,7 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ConflictException("Seller cannot delete another seller's product"));
 
         // If the product was ever ordered, we must not hard-delete it (FK order_items.product_id)
-        boolean ordered = orderItemRepository.existsByProductId(productId);
+        boolean ordered = orderItemRepository.existsByProduct_Id(productId);
         if (ordered) {
             throw new ConflictException("Cannot delete: this product is referenced by existing orders");
         }
@@ -188,7 +188,7 @@ public class ProductServiceImpl implements ProductService {
         Product p = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
-        boolean ordered = orderItemRepository.existsByProductId(productId);
+        boolean ordered = orderItemRepository.existsByProduct_Id(productId);
         if (ordered) {
             throw new ConflictException("Cannot delete: this product is referenced by existing orders");
         }
