@@ -13,4 +13,6 @@ public interface InventoryLogRepository extends JpaRepository<InventoryLog, Long
 
     @Query("SELECT l FROM InventoryLog l WHERE l.product.seller.id = :sellerId ORDER BY l.createdAt DESC")
     List<InventoryLog> findBySellerId(@Param("sellerId") Long sellerId);
+
+    void deleteByProduct(Product product);
 }

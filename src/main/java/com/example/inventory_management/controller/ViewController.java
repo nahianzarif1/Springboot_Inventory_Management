@@ -1,11 +1,13 @@
 package com.example.inventory_management.controller;
 
+import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.service.AuthService;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -20,13 +22,16 @@ import jakarta.validation.Valid;
 public class ViewController {
 
     private final AuthService authService;
+    private final ProductRepository productRepository;
 
-    public ViewController(AuthService authService) {
+    public ViewController(AuthService authService, ProductRepository productRepository) {
         this.authService = authService;
+        this.productRepository = productRepository;
     }
 
     @GetMapping("/")
-    public String home() {
+    public String home(Model model) {
+        model.addAttribute("lowStockProducts", productRepository.findLowStockGlobal(10, PageRequest.of(0, 8)));
         return "index";
     }
 

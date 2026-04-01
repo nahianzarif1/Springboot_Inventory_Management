@@ -32,6 +32,11 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, Long> {
             """)
     List<Object[]> sellerPerformance(@Param("canceled") OrderStatus canceled);
 
+<<<<<<< HEAD
+=======
+    boolean existsByProductId(Long productId);
+
+>>>>>>> feature/update01
     @Query("""
             SELECT CASE WHEN COUNT(i) > 0 THEN true ELSE false END
             FROM OrderItem i JOIN i.order o

@@ -10,8 +10,10 @@ import com.example.inventory_management.entity.Role;
 import com.example.inventory_management.entity.User;
 import com.example.inventory_management.exception.ConflictException;
 import com.example.inventory_management.exception.ResourceNotFoundException;
+import com.example.inventory_management.repository.CartItemRepository;
 import com.example.inventory_management.repository.CategoryRepository;
 import com.example.inventory_management.repository.InventoryLogRepository;
+import com.example.inventory_management.repository.OrderItemRepository;
 import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.repository.ProductReviewRepository;
 import com.example.inventory_management.repository.UserRepository;
@@ -30,6 +32,7 @@ import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.UUID;
 
@@ -45,6 +48,8 @@ public class ProductServiceImpl implements ProductService {
     private final InventoryLogService inventoryLogService;
     private final InventoryLogRepository inventoryLogRepository;
     private final ProductReviewRepository productReviewRepository;
+    private final CartItemRepository cartItemRepository;
+    private final OrderItemRepository orderItemRepository;
 
     public ProductServiceImpl(
             ProductRepository productRepository,
@@ -52,13 +57,17 @@ public class ProductServiceImpl implements ProductService {
             UserRepository userRepository,
             InventoryLogService inventoryLogService,
             InventoryLogRepository inventoryLogRepository,
-            ProductReviewRepository productReviewRepository) {
+            ProductReviewRepository productReviewRepository,
+            CartItemRepository cartItemRepository,
+            OrderItemRepository orderItemRepository) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.userRepository = userRepository;
         this.inventoryLogService = inventoryLogService;
         this.inventoryLogRepository = inventoryLogRepository;
         this.productReviewRepository = productReviewRepository;
+        this.cartItemRepository = cartItemRepository;
+        this.orderItemRepository = orderItemRepository;
     }
 
     private static String descOrEmpty(String d) {
@@ -156,7 +165,55 @@ public class ProductServiceImpl implements ProductService {
                 .orElseThrow(() -> new ResourceNotFoundException("Seller not found"));
         Product p = productRepository.findByIdAndSeller(productId, seller)
                 .orElseThrow(() -> new ConflictException("Seller cannot delete another seller's product"));
+
+        // If the product was ever ordered, we must not hard-delete it (FK order_items.product_id)
+        boolean ordered = orderItemRepository.existsByProductId(productId);
+        if (ordered) {
+            throw new ConflictException("Cannot delete: this product is referenced by existing orders");
+        }
+
+        // Clean up dependent rows that can safely be removed
+        cartItemRepository.deleteByProductId(productId);
+        inventoryLogRepository.deleteByProduct(p);
+
+        // Remove stored image if present
+        deleteStoredImageIfAny(p);
+
         productRepository.delete(p);
+    }
+
+    @Override
+    @Transactional
+    public void deleteProductByAdmin(long productId) {
+        Product p = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+
+        boolean ordered = orderItemRepository.existsByProductId(productId);
+        if (ordered) {
+            throw new ConflictException("Cannot delete: this product is referenced by existing orders");
+        }
+
+        cartItemRepository.deleteByProductId(productId);
+        inventoryLogRepository.deleteByProduct(p);
+        deleteStoredImageIfAny(p);
+
+        productRepository.delete(p);
+    }
+
+    private void deleteStoredImageIfAny(Product p) {
+        String oldUrl = p.getImageUrl();
+        if (oldUrl == null || !oldUrl.startsWith("/uploads/products/")) {
+            return;
+        }
+        String oldName = oldUrl.substring("/uploads/products/".length());
+        if (oldName.isBlank()) {
+            return;
+        }
+        try {
+            Path dir = Paths.get(uploadDir).toAbsolutePath().normalize();
+            Files.deleteIfExists(dir.resolve(oldName));
+        } catch (Exception ignored) {
+        }
     }
 
     @Override
@@ -178,14 +235,6 @@ public class ProductServiceImpl implements ProductService {
     @Transactional(readOnly = true)
     public List<ProductDTO> listAllProducts() {
         return productRepository.findAll().stream().map(this::toDto).toList();
-    }
-
-    @Override
-    @Transactional
-    public void deleteProductByAdmin(long productId) {
-        Product p = productRepository.findById(productId)
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-        productRepository.delete(p);
     }
 
     @Override
@@ -231,20 +280,43 @@ public class ProductServiceImpl implements ProductService {
         if (!admin && (p.getSeller() == null || !p.getSeller().getId().equals(user.getId()))) {
             throw new ConflictException("Seller cannot edit another seller's product");
         }
+
         try {
             Path dir = Paths.get(uploadDir).toAbsolutePath().normalize();
             Files.createDirectories(dir);
-            String original = file.getOriginalFilename();
-            String ext = "jpg";
-            if (original != null && original.contains(".")) {
-                ext = original.substring(original.lastIndexOf('.') + 1).toLowerCase();
-                if (ext.length() > 8) {
-                    ext = "jpg";
+
+            // Best-effort cleanup of previous stored image
+            String oldUrl = p.getImageUrl();
+            if (oldUrl != null && oldUrl.startsWith("/uploads/products/")) {
+                String oldName = oldUrl.substring("/uploads/products/".length());
+                if (!oldName.isBlank()) {
+                    try {
+                        Files.deleteIfExists(dir.resolve(oldName));
+                    } catch (Exception ignored) {
+                        // ignore cleanup errors
+                    }
                 }
             }
+
+            String original = file.getOriginalFilename();
+            String ext = "jpg";
+            if (original != null) {
+                int dot = original.lastIndexOf('.');
+                if (dot >= 0 && dot < original.length() - 1) {
+                    ext = original.substring(dot + 1).toLowerCase();
+                    ext = ext.replaceAll("[^a-z0-9]", "");
+                    if (ext.isBlank() || ext.length() > 8) {
+                        ext = "jpg";
+                    }
+                }
+            }
+
             String filename = productId + "-" + UUID.randomUUID() + "." + ext;
             Path dest = dir.resolve(filename);
-            file.transferTo(dest);
+
+            // Use copy to avoid OS-specific move issues; overwrite just in case
+            Files.copy(file.getInputStream(), dest, StandardCopyOption.REPLACE_EXISTING);
+
             p.setImageUrl("/uploads/products/" + filename);
         } catch (IOException e) {
             throw new ConflictException("Could not store image");

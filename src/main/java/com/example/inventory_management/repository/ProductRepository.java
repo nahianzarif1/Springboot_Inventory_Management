@@ -31,4 +31,11 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     boolean existsBySeller_IdAndNameIgnoreCase(Long sellerId, String name);
 
     boolean existsBySeller_IdAndNameIgnoreCaseAndIdNot(Long sellerId, String name, Long id);
+
+    @Query("""
+            SELECT p FROM Product p
+            WHERE p.stockQuantity <= :maxStock
+            ORDER BY p.stockQuantity ASC, p.id DESC
+            """)
+    List<Product> findLowStockGlobal(@Param("maxStock") int maxStock, Pageable pageable);
 }
