@@ -15,6 +15,48 @@
   --border:#e5e7eb;
   --shadow: 0 10px 26px rgba(17,24,39,.08);
 }
+
+/* Night mode variables */
+:root[data-theme='dark']{
+  --bg:#0b1220;
+  --card:#0f172a;
+  --muted:#94a3b8;
+  --text:#e5e7eb;
+  --border: rgba(148,163,184,.22);
+  --shadow: 0 10px 26px rgba(0,0,0,.35);
+}
+
+/* Ensure common surfaces adapt */
+:root[data-theme='dark'] body{ background: var(--bg); color: var(--text); }
+:root[data-theme='dark'] .card,
+:root[data-theme='dark'] .tile,
+:root[data-theme='dark'] .product-card{ background: var(--card); border-color: var(--border); }
+:root[data-theme='dark'] .table th{ background: rgba(148,163,184,.08); }
+:root[data-theme='dark'] .input input,
+:root[data-theme='dark'] .input select{
+  background: rgba(255,255,255,.02);
+  border-color: var(--border);
+  color: var(--text);
+}
+:root[data-theme='dark'] .btn{ background: rgba(255,255,255,.02); border-color: var(--border); color: var(--text); }
+:root[data-theme='dark'] .badge{ background: rgba(255,255,255,.02); border-color: var(--border); }
+
+/* Theme toggle button */
+.theme-toggle{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  border:1px solid rgba(255,255,255,.28);
+  background: rgba(255,255,255,.14);
+  color:#fff;
+  padding:10px 12px;
+  border-radius:12px;
+  cursor:pointer;
+  font-weight:900;
+}
+.theme-toggle:hover{ background: rgba(255,255,255,.18)}
+
+
 *{box-sizing:border-box}
 body{
   margin:0;

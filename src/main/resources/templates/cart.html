@@ -18,7 +18,7 @@
     </div>
 
     <div class="card" th:unless="${#lists.isEmpty(cartItems)}">
-        <table class="table">
+        <table class="table" id="cartTable">
             <thead>
             <tr>
                 <th>Product</th>
@@ -29,7 +29,7 @@
             </tr>
             </thead>
             <tbody>
-            <tr th:each="item : ${cartItems}">
+            <tr th:each="item : ${cartItems}" th:attr="data-unit=${item.unitPrice},data-qty=${item.quantity}">
                 <td th:text="${item.productName}">Name</td>
                 <td th:text="${item.unitPrice}">0</td>
                 <td>
@@ -56,6 +56,20 @@
             <div class="summary">
                 <div class="muted" style="font-weight:900;">Order summary</div>
                 <div class="muted" style="margin-top:8px;">Checkout will create an order and reduce stock.</div>
+
+                <div class="card" style="margin-top:12px;">
+                    <div style="display:flex; justify-content:space-between; gap:12px;">
+                        <div>
+                            <div class="muted">Items</div>
+                            <div style="font-weight:900; font-size: 18px;" id="itemCount">0</div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="muted">Subtotal</div>
+                            <div style="font-weight:900; font-size: 18px;">৳ <span id="subtotal">0</span></div>
+                        </div>
+                    </div>
+                    <div class="muted" style="margin-top:8px;">(Demo) Shipping: ৳ 0 • Total = Subtotal</div>
+                </div>
             </div>
             <div class="payment">
                 <div class="muted" style="font-weight:900;">Demo payment</div>
@@ -77,6 +91,22 @@
                 </form>
             </div>
         </div>
+
+        <script>
+            (function () {
+                const rows = document.querySelectorAll('#cartTable tbody tr');
+                let items = 0;
+                let subtotal = 0;
+                rows.forEach(r => {
+                    const unit = parseFloat(r.getAttribute('data-unit') || '0');
+                    const qty = parseInt(r.getAttribute('data-qty') || '0', 10);
+                    if (!Number.isNaN(qty)) items += qty;
+                    if (!Number.isNaN(unit) && !Number.isNaN(qty)) subtotal += unit * qty;
+                });
+                document.getElementById('itemCount').textContent = String(items);
+                document.getElementById('subtotal').textContent = subtotal.toFixed(2);
+            })();
+        </script>
     </div>
 </main>
 </body>

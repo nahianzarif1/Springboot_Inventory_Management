@@ -14,7 +14,7 @@
     <p class="sub">Public catalog. Sign in as buyer to add to cart, or as seller/admin to manage listings.</p>
 
     <div class="card" style="margin-bottom:16px;">
-        <form th:action="@{/ui/products}" method="get" class="form">
+        <form th:action="@{/ui/products}" method="get" class="form" id="filters">
             <div class="input">
                 <label>Search</label>
                 <input type="text" name="q" placeholder="Name or SKU" th:value="${q}"/>
@@ -27,13 +27,34 @@
                             th:selected="${categoryId != null && categoryId == c.id}"></option>
                 </select>
             </div>
+
+            <!-- extra client-side filters (works without backend changes) -->
+            <div class="input">
+                <label>Min price</label>
+                <input type="number" step="0.01" id="minPrice" placeholder="0"/>
+            </div>
+            <div class="input">
+                <label>Max price</label>
+                <input type="number" step="0.01" id="maxPrice" placeholder="Any"/>
+            </div>
+            <div class="input">
+                <label>Stock</label>
+                <select id="stockFilter">
+                    <option value="ALL">All</option>
+                    <option value="IN_STOCK">In stock only</option>
+                </select>
+            </div>
+
             <button class="btn primary" type="submit">Apply</button>
+            <button class="btn" type="button" onclick="window.__applyClientFilters?.()">Filter</button>
         </form>
+        <div class="muted" style="margin-top:10px;">Tip: Use <strong>Apply</strong> for server search; use <strong>Filter</strong> for min/max price + stock filters.</div>
     </div>
 
-    <!-- Product grid (small boxes like shopping websites) -->
-    <div class="product-grid">
-        <div class="product-card" th:each="p : ${products}">
+    <!-- Product grid -->
+    <div class="product-grid" id="productGrid">
+        <div class="product-card" th:each="p : ${products}"
+             th:attr="data-price=${p.price}, data-stock=${p.stockQuantity}, data-name=${p.name}">
             <img class="product-card__img" th:if="${p.imageUrl != null}" th:src="${p.imageUrl}" alt=""/>
             <div class="product-card__img" th:unless="${p.imageUrl != null}"></div>
 
@@ -51,9 +72,7 @@
                     <span th:text="${#numbers.formatDecimal(p.averageRating, 1, 1)}">0.0</span>
                     <span class="muted">(<span th:text="${p.reviewCount}">0</span> reviews)</span>
                     <span> • </span>
-                    <a th:href="@{'/ui/products/' + ${p.id} + '/reviews'}" style="color: var(--accent); text-decoration:none; font-weight:800;">
-                        View
-                    </a>
+                    <a th:href="@{'/ui/products/' + ${p.id} + '/reviews'}" style="color: var(--accent); text-decoration:none; font-weight:800;">View</a>
                 </div>
 
                 <div class="product-card__actions" sec:authorize="hasRole('BUYER')">
@@ -71,6 +90,27 @@
             </div>
         </div>
     </div>
+
+    <script>
+        window.__applyClientFilters = function () {
+            const min = parseFloat(document.getElementById('minPrice').value || '');
+            const max = parseFloat(document.getElementById('maxPrice').value || '');
+            const stockMode = document.getElementById('stockFilter').value;
+
+            const cards = document.querySelectorAll('#productGrid .product-card');
+            cards.forEach(c => {
+                const price = parseFloat(c.getAttribute('data-price') || '0');
+                const stock = parseInt(c.getAttribute('data-stock') || '0', 10);
+
+                let ok = true;
+                if (!Number.isNaN(min) && price < min) ok = false;
+                if (!Number.isNaN(max) && price > max) ok = false;
+                if (stockMode === 'IN_STOCK' && stock <= 0) ok = false;
+
+                c.style.display = ok ? '' : 'none';
+            });
+        };
+    </script>
 
     <!-- Management section stays table-based for editing convenience -->
     <div class="card" style="margin-top:16px;" sec:authorize="hasAnyRole('SELLER','ADMIN')">
