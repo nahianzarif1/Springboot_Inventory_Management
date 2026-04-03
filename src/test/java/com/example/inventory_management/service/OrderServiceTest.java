@@ -13,6 +13,7 @@ import org.springframework.context.annotation.Import;
 
 import com.example.inventory_management.repository.CartItemRepository;
 import com.example.inventory_management.repository.OrderRepository;
+import com.example.inventory_management.service.impl.CouponServiceImpl;
 import com.example.inventory_management.service.impl.InventoryLogServiceImpl;
 import com.example.inventory_management.service.impl.OrderServiceImpl;
 
@@ -23,7 +24,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@Import({OrderServiceImpl.class, InventoryLogServiceImpl.class})
+@Import({OrderServiceImpl.class, InventoryLogServiceImpl.class, CouponServiceImpl.class})
 class OrderServiceTest {
 
     @Autowired OrderService orderService;

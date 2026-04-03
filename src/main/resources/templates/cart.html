@@ -79,6 +79,11 @@
                     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
 
                     <div class="input">
+                        <label>Coupon code (optional)</label>
+                        <input type="text" name="couponCode" maxlength="40" placeholder="Seller coupon code" autocomplete="off"/>
+                    </div>
+
+                    <div class="input">
                         <label>Payment method</label>
                         <select name="paymentMethod">
                             <option value="COD">Cash on Delivery (Demo)</option>

@@ -3,7 +3,9 @@ package com.example.inventory_management.controller;
 import com.example.inventory_management.dto.cart.CartItemDTO;
 import com.example.inventory_management.dto.product.ProductCreateRequest;
 import com.example.inventory_management.dto.product.ProductUpdateRequest;
+import com.example.inventory_management.dto.coupon.CreateCouponRequest;
 import com.example.inventory_management.dto.review.CreateProductReviewRequest;
+import com.example.inventory_management.entity.DiscountType;
 import com.example.inventory_management.dto.user.AdminUserCreateRequest;
 import com.example.inventory_management.dto.user.AdminUserUpdateRequest;
 import com.example.inventory_management.entity.OrderStatus;
@@ -12,6 +14,7 @@ import com.example.inventory_management.repository.ProductReviewRepository;
 import com.example.inventory_management.repository.CategoryRepository;
 import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.repository.UserRepository;
+import com.example.inventory_management.service.CouponService;
 import com.example.inventory_management.service.CartService;
 import com.example.inventory_management.service.OrderService;
 import com.example.inventory_management.service.ProductService;
@@ -35,6 +38,9 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -54,6 +60,7 @@ public class UiController {
     private final ProductReviewService productReviewService;
     private final ProductReviewRepository productReviewRepository;
     private final UserRepository userRepository;
+    private final CouponService couponService;
 
     public UiController(
             ProductService productService,
@@ -65,7 +72,8 @@ public class UiController {
             ProductRepository productRepository,
             ProductReviewService productReviewService,
             ProductReviewRepository productReviewRepository,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            CouponService couponService) {
         this.productService = productService;
         this.cartService = cartService;
         this.orderService = orderService;
@@ -76,6 +84,7 @@ public class UiController {
         this.productReviewService = productReviewService;
         this.productReviewRepository = productReviewRepository;
         this.userRepository = userRepository;
+        this.couponService = couponService;
     }
 
     @GetMapping("/products")
@@ -222,8 +231,10 @@ public class UiController {
 
     @PostMapping("/cart/checkout")
     @PreAuthorize("hasRole('BUYER')")
-    public String checkout(Authentication authentication, RedirectAttributes redirectAttributes) {
-        orderService.createOrderFromCart(authentication.getName());
+    public String checkout(@RequestParam(required = false) String couponCode,
+                           Authentication authentication,
+                           RedirectAttributes redirectAttributes) {
+        orderService.createOrderFromCart(authentication.getName(), couponCode);
         redirectAttributes.addFlashAttribute("message", "Order placed");
         return "redirect:/ui/orders";
     }
@@ -262,6 +273,42 @@ public class UiController {
         orderService.payDemo(id, authentication.getName());
         redirectAttributes.addFlashAttribute("message", "Demo payment successful");
         return "redirect:/ui/orders";
+    }
+
+    @GetMapping("/seller/coupons")
+    @PreAuthorize("hasRole('SELLER')")
+    @Transactional(readOnly = true)
+    public String sellerCoupons(Authentication authentication, Model model) {
+        model.addAttribute("coupons", couponService.listForSeller(authentication.getName()));
+        model.addAttribute("discountTypes", DiscountType.values());
+        return "seller_coupons";
+    }
+
+    @PostMapping("/seller/coupons")
+    @PreAuthorize("hasRole('SELLER')")
+    public String sellerCouponCreate(@RequestParam String code,
+                                     @RequestParam DiscountType discountType,
+                                     @RequestParam BigDecimal discountValue,
+                                     @RequestParam String expiresAt,
+                                     @RequestParam(required = false) Integer usageLimit,
+                                     Authentication authentication,
+                                     RedirectAttributes redirectAttributes) {
+        LocalDateTime ldt = LocalDateTime.parse(expiresAt);
+        Instant expires = ldt.atZone(ZoneId.systemDefault()).toInstant();
+        couponService.create(authentication.getName(), new CreateCouponRequest(
+                code, discountType, discountValue, expires, usageLimit));
+        redirectAttributes.addFlashAttribute("message", "Coupon created");
+        return "redirect:/ui/seller/coupons";
+    }
+
+    @PostMapping("/seller/coupons/{id}/deactivate")
+    @PreAuthorize("hasRole('SELLER')")
+    public String sellerCouponDeactivate(@PathVariable long id,
+                                         Authentication authentication,
+                                         RedirectAttributes redirectAttributes) {
+        couponService.deactivate(id, authentication.getName());
+        redirectAttributes.addFlashAttribute("message", "Coupon deactivated");
+        return "redirect:/ui/seller/coupons";
     }
 
     @GetMapping("/seller")

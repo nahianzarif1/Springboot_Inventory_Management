@@ -21,6 +21,9 @@
                 <th>ID</th>
                 <th>Buyer</th>
                 <th>Status</th>
+                <th>Subtotal</th>
+                <th>Discount</th>
+                <th>Coupon</th>
                 <th>Total</th>
                 <th>Created</th>
                 <th>Items</th>
@@ -33,6 +36,9 @@
                 <td th:text="${o.id}">1</td>
                 <td th:text="${o.buyerUsername}">buyer</td>
                 <td th:text="${o.status}">PENDING</td>
+                <td th:text="${o.subtotal}">0</td>
+                <td th:text="${o.discountAmount}">0</td>
+                <td th:text="${o.couponCode != null ? o.couponCode : '—'}">—</td>
                 <td th:text="${o.totalPrice}">0</td>
                 <td th:text="${o.createdAt}">-</td>
                 <td>

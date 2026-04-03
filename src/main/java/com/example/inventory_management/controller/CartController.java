@@ -40,7 +40,7 @@ public class CartController {
     }
 
     @PostMapping("/checkout")
-    public OrderDTO checkout(Authentication authentication) {
-        return orderService.createOrderFromCart(authentication.getName());
+    public OrderDTO checkout(@RequestParam(required = false) String couponCode, Authentication authentication) {
+        return orderService.createOrderFromCart(authentication.getName(), couponCode);
     }
 }

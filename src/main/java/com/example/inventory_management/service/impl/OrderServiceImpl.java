@@ -2,6 +2,7 @@ package com.example.inventory_management.service.impl;
 
 import com.example.inventory_management.dto.OrderDTO;
 import com.example.inventory_management.entity.CartItem;
+import com.example.inventory_management.entity.Coupon;
 import com.example.inventory_management.entity.Order;
 import com.example.inventory_management.entity.OrderItem;
 import com.example.inventory_management.entity.OrderStatus;
@@ -11,9 +12,11 @@ import com.example.inventory_management.exception.ConflictException;
 import com.example.inventory_management.exception.InsufficientStockException;
 import com.example.inventory_management.exception.ResourceNotFoundException;
 import com.example.inventory_management.repository.CartItemRepository;
+import com.example.inventory_management.repository.CouponRepository;
 import com.example.inventory_management.repository.OrderRepository;
 import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.repository.UserRepository;
+import com.example.inventory_management.service.CouponService;
 import com.example.inventory_management.service.InventoryLogService;
 import com.example.inventory_management.service.OrderService;
 import org.springframework.stereotype.Service;
@@ -30,23 +33,35 @@ public class OrderServiceImpl implements OrderService {
     private final ProductRepository productRepository;
     private final CartItemRepository cartItemRepository;
     private final InventoryLogService inventoryLogService;
+    private final CouponService couponService;
+    private final CouponRepository couponRepository;
 
     public OrderServiceImpl(
             OrderRepository orderRepository,
             UserRepository userRepository,
             ProductRepository productRepository,
             CartItemRepository cartItemRepository,
-            InventoryLogService inventoryLogService) {
+            InventoryLogService inventoryLogService,
+            CouponService couponService,
+            CouponRepository couponRepository) {
         this.orderRepository = orderRepository;
         this.userRepository = userRepository;
         this.productRepository = productRepository;
         this.cartItemRepository = cartItemRepository;
         this.inventoryLogService = inventoryLogService;
+        this.couponService = couponService;
+        this.couponRepository = couponRepository;
     }
 
     @Override
     @Transactional
     public OrderDTO createOrderFromCart(String buyerUsername) {
+        return createOrderFromCart(buyerUsername, null);
+    }
+
+    @Override
+    @Transactional
+    public OrderDTO createOrderFromCart(String buyerUsername, String couponCode) {
         User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
 
@@ -55,23 +70,43 @@ public class OrderServiceImpl implements OrderService {
             throw new ConflictException("Cart is empty");
         }
 
-        return createOrder(buyerUsername, cart.stream()
+        List<CreateItem> items = cart.stream()
                 .map(ci -> new CreateItem(ci.getProduct().getId(), ci.getQuantity()))
-                .toList());
+                .toList();
+
+        OrderDTO dto = placeOrder(buyer, items, couponCode);
+        cartItemRepository.deleteByBuyer(buyer);
+        return dto;
     }
 
     @Override
     @Transactional
     public OrderDTO createOrder(String buyerUsername, List<CreateItem> items) {
+        return createOrder(buyerUsername, items, null);
+    }
+
+    @Override
+    @Transactional
+    public OrderDTO createOrder(String buyerUsername, List<CreateItem> items, String couponCode) {
         User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
+        return placeOrder(buyer, items, couponCode);
+    }
 
+    private OrderDTO placeOrder(User buyer, List<CreateItem> items, String couponCode) {
         if (items == null || items.isEmpty()) {
             throw new ConflictException("Order items required");
         }
 
-        Order order = Order.builder().buyer(buyer).status(OrderStatus.PENDING).totalPrice(BigDecimal.ZERO).build();
-        BigDecimal total = BigDecimal.ZERO;
+        Order order = Order.builder()
+                .buyer(buyer)
+                .status(OrderStatus.PENDING)
+                .subtotal(BigDecimal.ZERO)
+                .discountAmount(BigDecimal.ZERO)
+                .totalPrice(BigDecimal.ZERO)
+                .build();
+
+        BigDecimal subtotal = BigDecimal.ZERO;
 
         for (CreateItem reqItem : items) {
             if (reqItem.quantity() <= 0) {
@@ -95,12 +130,25 @@ public class OrderServiceImpl implements OrderService {
                     .unitPrice(product.getPrice())
                     .build();
             order.addItem(oi);
-            total = total.add(product.getPrice().multiply(BigDecimal.valueOf(reqItem.quantity())));
+            subtotal = subtotal.add(product.getPrice().multiply(BigDecimal.valueOf(reqItem.quantity())));
         }
 
-        order.setTotalPrice(total);
+        CouponService.DiscountCalculation applied = couponService.calculateDiscount(couponCode, items);
+        BigDecimal discount = applied.discountAmount() != null ? applied.discountAmount() : BigDecimal.ZERO;
+        Coupon coupon = applied.couponOrNull();
+
+        order.setSubtotal(subtotal);
+        order.setDiscountAmount(discount);
+        order.setCoupon(coupon);
+        order.setTotalPrice(subtotal.subtract(discount));
+
         Order saved = orderRepository.save(order);
-        cartItemRepository.deleteByBuyer(buyer);
+
+        if (coupon != null) {
+            Coupon fresh = couponRepository.findById(coupon.getId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
+            fresh.setUsageCount(fresh.getUsageCount() + 1);
+        }
 
         return toDto(saved);
     }
@@ -220,17 +268,34 @@ public class OrderServiceImpl implements OrderService {
             inventoryLogService.record(product, old, product.getStockQuantity(), seller);
         }
 
+        if (o.getCoupon() != null && o.getDiscountAmount() != null
+                && o.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            couponRepository.findById(o.getCoupon().getId()).ifPresent(c -> {
+                if (c.getUsageCount() > 0) {
+                    c.setUsageCount(c.getUsageCount() - 1);
+                }
+            });
+        }
+
         o.setStatus(OrderStatus.CANCELED);
         return toDto(o);
     }
 
     private OrderDTO toDto(Order o) {
+        BigDecimal discount = o.getDiscountAmount() != null ? o.getDiscountAmount() : BigDecimal.ZERO;
+        BigDecimal total = o.getTotalPrice() != null ? o.getTotalPrice() : BigDecimal.ZERO;
+        BigDecimal subtotal = o.getSubtotal() != null ? o.getSubtotal() : total.add(discount);
+        String couponCode = o.getCoupon() != null ? o.getCoupon().getCode() : null;
+
         return new OrderDTO(
                 o.getId(),
                 o.getBuyer().getId(),
                 o.getBuyer().getUsername(),
                 o.getStatus(),
                 o.getCreatedAt(),
+                subtotal,
+                discount,
+                couponCode,
                 o.getTotalPrice() != null ? o.getTotalPrice() : BigDecimal.ZERO,
                 o.getItems().stream()
                         .map(i -> new OrderDTO.OrderItemDTO(
