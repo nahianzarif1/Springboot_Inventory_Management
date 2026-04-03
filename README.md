@@ -73,8 +73,8 @@ AdminController
 - PATCH `/admin/users/{id}/enabled`
 - DELETE `/admin/users/{id}`
 
-
-
+##Schema Diagram
+<img width="1737" height="1091" alt="Untitled" src="https://github.com/user-attachments/assets/5d709255-0ea4-43f2-8b8f-35acfbc09a01" />
 ### ER diagram (tables + relationships)
 ![ER.png](src/main/resources/static/images/ER.png)
 ### Class diagram (domain model)
