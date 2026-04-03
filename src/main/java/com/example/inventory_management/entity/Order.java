@@ -34,6 +34,19 @@ public class Order {
     @Column(nullable = false, length = 20)
     private OrderStatus status = OrderStatus.PENDING;
 
+    /** Sum of line items before coupon discount */
+    @Builder.Default
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal subtotal = BigDecimal.ZERO;
+
+    @Builder.Default
+    @Column(nullable = false, precision = 19, scale = 2)
+    private BigDecimal discountAmount = BigDecimal.ZERO;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "coupon_id")
+    private Coupon coupon;
+
     @Builder.Default
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal totalPrice = BigDecimal.ZERO;

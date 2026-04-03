@@ -4,6 +4,7 @@ import com.example.inventory_management.entity.*;
 import com.example.inventory_management.exception.ConflictException;
 import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.repository.UserRepository;
+import com.example.inventory_management.service.impl.CouponServiceImpl;
 import com.example.inventory_management.service.impl.InventoryLogServiceImpl;
 import com.example.inventory_management.service.impl.OrderServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,7 +20,7 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
-@Import({OrderServiceImpl.class, InventoryLogServiceImpl.class})
+@Import({OrderServiceImpl.class, InventoryLogServiceImpl.class, CouponServiceImpl.class})
 class OrderServiceAdditionalTest {
 
     @Autowired OrderService orderService;

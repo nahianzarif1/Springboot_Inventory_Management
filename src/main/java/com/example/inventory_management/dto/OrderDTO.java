@@ -12,6 +12,9 @@ public record OrderDTO(
         String buyerUsername,
         OrderStatus status,
         Instant createdAt,
+        BigDecimal subtotal,
+        BigDecimal discountAmount,
+        String couponCode,
         BigDecimal totalPrice,
         List<OrderItemDTO> items
 ) {

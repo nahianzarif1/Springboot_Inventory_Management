@@ -8,7 +8,11 @@ import java.util.List;
 public interface OrderService {
     OrderDTO createOrderFromCart(String buyerUsername);
 
+    OrderDTO createOrderFromCart(String buyerUsername, String couponCode);
+
     OrderDTO createOrder(String buyerUsername, List<CreateItem> items);
+
+    OrderDTO createOrder(String buyerUsername, List<CreateItem> items, String couponCode);
 
     OrderDTO payDemo(long orderId, String buyerUsername);
 

@@ -5,6 +5,6 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
-public record CreateOrderRequest(@NotNull List<Item> items) {
+public record CreateOrderRequest(@NotNull List<Item> items, String couponCode) {
     public record Item(@NotNull Long productId, @Min(1) int quantity) {}
 }

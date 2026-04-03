@@ -29,7 +29,8 @@ public class OrderController {
             return orderService.createOrderFromCart(authentication.getName());
         }
         return orderService.createOrder(authentication.getName(),
-                request.items().stream().map(i -> new OrderService.CreateItem(i.productId(), i.quantity())).toList());
+                request.items().stream().map(i -> new OrderService.CreateItem(i.productId(), i.quantity())).toList(),
+                request.couponCode());
     }
 
     @GetMapping
