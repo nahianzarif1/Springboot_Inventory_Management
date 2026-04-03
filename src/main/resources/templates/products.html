@@ -44,11 +44,20 @@
                     <option value="IN_STOCK">In stock only</option>
                 </select>
             </div>
+            <div class="input">
+                <label>Sort</label>
+                <select id="sortMode">
+                    <option value="DEFAULT">Default</option>
+                    <option value="PRICE_ASC">Price: low → high</option>
+                    <option value="PRICE_DESC">Price: high → low</option>
+                </select>
+            </div>
 
             <button class="btn primary" type="submit">Apply</button>
             <button class="btn" type="button" onclick="window.__applyClientFilters?.()">Filter</button>
+            <button class="btn" type="button" onclick="window.__applySort?.()">Sort</button>
         </form>
-        <div class="muted" style="margin-top:10px;">Tip: Use <strong>Apply</strong> for server search; use <strong>Filter</strong> for min/max price + stock filters.</div>
+        <div class="muted" style="margin-top:10px;">Tip: Use <strong>Apply</strong> for server search; use <strong>Filter</strong>/<strong>Sort</strong> for min/max price + stock + price sorting.</div>
     </div>
 
     <!-- Product grid -->
@@ -109,6 +118,37 @@
 
                 c.style.display = ok ? '' : 'none';
             });
+        };
+
+        window.__applySort = function () {
+            const mode = document.getElementById('sortMode').value;
+            const grid = document.getElementById('productGrid');
+            const cards = Array.from(grid.querySelectorAll('.product-card'));
+
+            const visible = (c) => c.style.display !== 'none';
+
+            function priceOf(c){
+                return parseFloat(c.getAttribute('data-price') || '0');
+            }
+            function nameOf(c){
+                return (c.getAttribute('data-name') || '').toLowerCase();
+            }
+
+            let sorted = cards.slice();
+            if (mode === 'PRICE_ASC') {
+                sorted.sort((a,b) => priceOf(a) - priceOf(b) || nameOf(a).localeCompare(nameOf(b)));
+            } else if (mode === 'PRICE_DESC') {
+                sorted.sort((a,b) => priceOf(b) - priceOf(a) || nameOf(a).localeCompare(nameOf(b)));
+            } else {
+                // DEFAULT: keep original order as rendered
+                sorted = cards;
+            }
+
+            // Re-append in order (preserves hidden/visible state)
+            sorted.forEach(c => grid.appendChild(c));
+
+            // If user filtered before sorting, keep those hidden
+            cards.filter(c => !visible(c)).forEach(c => c.style.display = 'none');
         };
     </script>
 
