@@ -3,11 +3,11 @@ FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
 COPY .mvn/ .mvn/
-COPY mvnw pom.xml ./
-RUN ./mvnw -q -DskipTests package || true
-
+COPY mvnw mvnw.cmd pom.xml ./
 COPY src/ src/
-RUN ./mvnw -q -DskipTests package
+
+RUN chmod +x mvnw \
+    && ./mvnw -q -DskipTests clean package
 
 RUN mkdir -p /app/uploads/products
 
