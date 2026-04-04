@@ -14,9 +14,9 @@
             <a th:href="@{/}">Home</a>
             <a th:href="@{/ui/products}">Products</a>
             <a sec:authorize="hasRole('BUYER')" th:href="@{/ui/cart}">Cart</a>
-            <a sec:authorize="hasRole('BUYER')" th:href="@{/ui/orders}">My orders</a>
+            <a sec:authorize="hasRole('BUYER')" th:href="@{/ui/orders}">Orders</a>
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/ui/admin/orders}">All orders</a>
             <a sec:authorize="hasRole('SELLER')" th:href="@{/ui/seller}">Seller</a>
-            <a sec:authorize="hasRole('SELLER')" th:href="@{/ui/seller/coupons}">Coupons</a>
             <a sec:authorize="hasRole('ADMIN')" th:href="@{/ui/admin}">Users</a>
             <a sec:authorize="hasRole('ADMIN')" th:href="@{/ui/admin/products}">Inventory</a>
             <a sec:authorize="hasRole('ADMIN')" th:href="@{/ui/reports}">Reports</a>
@@ -34,7 +34,7 @@
 
 <div th:fragment="alerts" class="container" style="padding-top:0;">
     <div th:if="${message}" class="card" style="margin-top:16px; border-color: rgba(43,213,118,.35);">
-        <span class="badge success"><strong>OK</strong> <span th:text="${message}">Message</span></span>
+        <span class="badge success"><strong>OK</strong> <span th:text="${message}" style="white-space:normal;">Message</span></span>
     </div>
     <div th:if="${error}" class="card" style="margin-top:16px; border-color: rgba(255,93,93,.35);">
         <span class="badge danger"><strong>Error</strong> <span th:text="${error}">Error</span></span>

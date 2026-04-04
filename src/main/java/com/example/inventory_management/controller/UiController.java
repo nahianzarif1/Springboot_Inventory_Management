@@ -1,6 +1,9 @@
 package com.example.inventory_management.controller;
 
+import com.example.inventory_management.dto.OrderDTO;
+import com.example.inventory_management.dto.ProductDTO;
 import com.example.inventory_management.dto.cart.CartItemDTO;
+import com.example.inventory_management.entity.CartItem;
 import com.example.inventory_management.dto.product.ProductCreateRequest;
 import com.example.inventory_management.dto.product.ProductUpdateRequest;
 import com.example.inventory_management.dto.coupon.CreateCouponRequest;
@@ -38,11 +41,13 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -98,6 +103,13 @@ public class UiController {
         model.addAttribute("categoryId", categoryId);
         model.addAttribute("createForm", new ProductForm());
         return "products";
+    }
+
+    @GetMapping("/products/{id}")
+    public String productDetail(@PathVariable long id, Model model) {
+        ProductDTO product = productService.findProductById(id);
+        model.addAttribute("product", product);
+        return "product_detail";
     }
 
     @GetMapping("/products/{id}/reviews")
@@ -197,15 +209,25 @@ public class UiController {
     @GetMapping("/cart")
     @Transactional(readOnly = true)
     public String cart(Authentication authentication, Model model) {
-        var cartItems = cartService.getCart(authentication.getName()).stream()
-                .map(ci -> new CartItemDTO(
-                        ci.getProduct().getId(),
-                        ci.getProduct().getName(),
-                        ci.getProduct().getPrice(),
-                        ci.getQuantity()))
+        List<CartItemDTO> cartItems = cartService.getCart(authentication.getName()).stream()
+                .map(this::toCartItemDto)
                 .toList();
         model.addAttribute("cartItems", cartItems);
         return "cart";
+    }
+
+    private CartItemDTO toCartItemDto(CartItem ci) {
+        var p = ci.getProduct();
+        var s = p.getSeller();
+        long sellerId = s != null ? s.getId() : 0L;
+        String sellerName = s != null ? s.getUsername() : "—";
+        return new CartItemDTO(
+                p.getId(),
+                p.getName(),
+                p.getPrice(),
+                ci.getQuantity(),
+                sellerId,
+                sellerName);
     }
 
     @PostMapping("/cart/add")
@@ -231,48 +253,61 @@ public class UiController {
 
     @PostMapping("/cart/checkout")
     @PreAuthorize("hasRole('BUYER')")
-    public String checkout(@RequestParam(required = false) String couponCode,
+    public String checkout(@RequestParam(required = false) String paymentMethod,
                            Authentication authentication,
                            RedirectAttributes redirectAttributes) {
-        orderService.createOrderFromCart(authentication.getName(), couponCode);
-        redirectAttributes.addFlashAttribute("message", "Order placed");
+        OrderDTO order = orderService.checkoutFromCartAndPayDemo(authentication.getName(), paymentMethod);
+        redirectAttributes.addFlashAttribute("message", checkoutSuccessMessage(order));
         return "redirect:/ui/orders";
     }
 
+    /** Buyer: order list (DTOs; repository uses entity graph — safe with open-in-view false in tests). */
     @GetMapping("/orders")
-    @PreAuthorize("hasAnyRole('BUYER','ADMIN')")
-    public String orders(Authentication authentication, Model model) {
-        boolean admin = authentication.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        model.addAttribute("orders", orderService.listOrders(authentication.getName(), admin));
-        model.addAttribute("statuses", OrderStatus.values());
-        model.addAttribute("admin", admin);
-        return "orders";
+    @PreAuthorize("hasRole('BUYER')")
+    public String buyerOrders(Authentication authentication, Model model) {
+        model.addAttribute("orders", orderService.listOrders(authentication.getName(), false));
+        return "buyer_orders";
     }
 
-    @PostMapping("/orders/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
-    public String updateOrderStatus(@PathVariable long id, @RequestParam OrderStatus status) {
-        orderService.updateStatus(id, status);
+    @GetMapping("/my-orders")
+    @PreAuthorize("hasRole('BUYER')")
+    public String myOrdersLegacyRedirect() {
         return "redirect:/ui/orders";
     }
 
     @PostMapping("/orders/{id}/cancel")
     @PreAuthorize("hasRole('BUYER')")
-    public String cancelOrder(@PathVariable long id, Authentication authentication,
-                              RedirectAttributes redirectAttributes) {
+    public String cancelBuyerOrder(@PathVariable long id,
+                                   Authentication authentication,
+                                   RedirectAttributes redirectAttributes) {
         orderService.cancelOrder(id, authentication.getName());
         redirectAttributes.addFlashAttribute("message", "Order canceled");
         return "redirect:/ui/orders";
     }
 
-    @PostMapping("/orders/{id}/pay-demo")
-    @PreAuthorize("hasRole('BUYER')")
-    public String payDemo(@PathVariable long id, Authentication authentication,
-                          RedirectAttributes redirectAttributes) {
-        orderService.payDemo(id, authentication.getName());
-        redirectAttributes.addFlashAttribute("message", "Demo payment successful");
-        return "redirect:/ui/orders";
+    private static String checkoutSuccessMessage(OrderDTO o) {
+        BigDecimal total = o.totalPrice() != null ? o.totalPrice() : BigDecimal.ZERO;
+        String totalS = total.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        if (o.status() == OrderStatus.PENDING) {
+            return "Order placed. Order #" + o.id() + " is PENDING (Cash on Delivery). Total: ৳ " + totalS + ".";
+        }
+        return "Order placed (demo). Order #" + o.id() + " is PAID. Total: ৳ " + totalS + ".";
+    }
+
+    /** Admin: all orders and status updates. */
+    @GetMapping("/admin/orders")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String adminOrders(Model model) {
+        model.addAttribute("orders", orderService.listOrders("", true));
+        model.addAttribute("statuses", OrderStatus.values());
+        return "admin_orders";
+    }
+
+    @PostMapping("/admin/orders/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public String updateAdminOrderStatus(@PathVariable long id, @RequestParam OrderStatus status) {
+        orderService.updateStatus(id, status);
+        return "redirect:/ui/admin/orders";
     }
 
     @GetMapping("/seller/coupons")

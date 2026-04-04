@@ -103,7 +103,7 @@ public class CartServiceImpl implements CartService {
     public List<CartItem> getCart(String buyerUsername) {
         User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
-        return cartItemRepository.findByBuyer(buyer);
+        return cartItemRepository.findByBuyerWithProductDetails(buyer);
     }
 
     @Override

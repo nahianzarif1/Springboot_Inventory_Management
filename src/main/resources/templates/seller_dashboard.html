@@ -54,23 +54,23 @@
             </thead>
             <tbody>
             <tr th:each="o : ${orders}">
-                <td th:text="${o.id}">1</td>
-                <td th:text="${o.buyerUsername}">b</td>
-                <td th:text="${o.status}">PENDING</td>
-                <td th:text="${o.totalPrice}">0</td>
+                <td th:text="${o.id()}">1</td>
+                <td th:text="${o.buyerUsername()}">b</td>
+                <td th:text="${o.status()}">PENDING</td>
+                <td th:text="${o.totalPrice()}">0</td>
                 <td>
                     <ul class="muted stack" style="margin:0;padding-left:18px;">
-                        <li th:each="i : ${o.items}" th:text="${i.productName + ' x ' + i.quantity}">x</li>
+                        <li th:each="i : ${o.items()}" th:text="${i.productName() + ' x ' + i.quantity()}">x</li>
                     </ul>
                 </td>
                 <td>
-                    <form th:action="@{'/ui/seller/orders/' + ${o.id} + '/status'}" method="post" class="row-actions">
+                    <form th:if="${o.status().name() == 'PAID'}"
+                          th:action="@{/ui/seller/orders/{id}/status(id=${o.id()})}" method="post" class="row-actions">
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                        <select name="status">
-                            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
-                        </select>
-                        <button class="btn primary" type="submit">Set</button>
+                        <input type="hidden" name="status" value="SHIPPED"/>
+                        <button class="btn primary" type="submit">Mark shipped</button>
                     </form>
+                    <span class="muted" th:if="${o.status().name() != 'PAID'}">—</span>
                 </td>
             </tr>
             </tbody>

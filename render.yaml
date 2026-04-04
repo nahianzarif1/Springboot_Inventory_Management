@@ -1,0 +1,22 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# Deploys: (1) autoDeploy: true when the Git repo is connected in Render, and/or (2) GitHub Actions on push to
+# `main` after CI passes — create a Deploy Hook (Dashboard → service → Settings → Build & Deploy → Deploy Hook),
+# then add secret RENDER_DEPLOY_HOOK_URL in the GitHub repo (.github/workflows/tests.yml).
+# Add a Render PostgreSQL instance in the dashboard (or extend this file with a `databases:` section) and set
+# SPRING_DATASOURCE_URL, SPRING_DATASOURCE_USERNAME, SPRING_DATASOURCE_PASSWORD to match your DB.
+
+services:
+  - type: web
+    name: inventory-management
+    env: docker
+    region: oregon
+    plan: free
+    branch: main
+    autoDeploy: true
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: APP_UPLOAD_DIR
+        value: /app/uploads/products

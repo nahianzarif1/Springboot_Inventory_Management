@@ -18,5 +18,10 @@ public record OrderDTO(
         BigDecimal totalPrice,
         List<OrderItemDTO> items
 ) {
-    public record OrderItemDTO(Long productId, String productName, int quantity, BigDecimal unitPrice) {}
+    public record OrderItemDTO(Long productId, String productName, int quantity, BigDecimal unitPrice) {
+        public BigDecimal lineTotal() {
+            BigDecimal up = unitPrice != null ? unitPrice : BigDecimal.ZERO;
+            return up.multiply(BigDecimal.valueOf(quantity));
+        }
+    }
 }

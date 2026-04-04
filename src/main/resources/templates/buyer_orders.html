@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Orders</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <div class="h1" style="margin-top:0;">Orders</div>
+    <p class="sub">List of orders for the current user. Each order shows <strong>order details</strong>: products, quantities, total cost, and status. Unpaid <strong>PENDING</strong> orders can be canceled.</p>
+
+    <div class="card" th:if="${orders == null || orders.isEmpty()}">
+        <p class="muted">You have no orders yet. <a th:href="@{/ui/products}">Browse products</a> or open your <a th:href="@{/ui/cart}">cart</a>.</p>
+    </div>
+
+    <div th:unless="${orders == null || orders.isEmpty()}" style="display:flex; flex-direction:column; gap:16px;">
+        <article class="card" th:each="o : ${orders}">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:flex-start;">
+                <div>
+                    <div style="font-weight:800; font-size:18px;">Order #<span th:text="${o.id}">0</span></div>
+                    <div class="muted" th:text="${o.createdAt}">—</div>
+                </div>
+                <div style="text-align:right;">
+                    <div class="muted" style="font-size:12px; margin-bottom:4px;">Status</div>
+                    <span class="badge" th:text="${o.status}">PAID</span>
+                </div>
+            </div>
+
+            <div class="muted" style="font-weight:800; margin-top:12px; font-size:13px; letter-spacing:0.02em;">Order details</div>
+            <table class="table" style="margin-top:8px;">
+                <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Quantity</th>
+                    <th>Unit price</th>
+                    <th>Line total</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="i : ${o.items}">
+                    <td th:text="${i.productName}">—</td>
+                    <td th:text="${i.quantity}">0</td>
+                    <td>৳ <span th:text="${#numbers.formatDecimal(i.unitPrice, 1, 2)}">0</span></td>
+                    <td>৳ <span th:text="${#numbers.formatDecimal(i.lineTotal, 1, 2)}">0</span></td>
+                </tr>
+                </tbody>
+            </table>
+
+            <div class="muted" style="margin-top:12px; text-align:right; line-height:1.7;">
+                <div>Subtotal: ৳ <span th:text="${#numbers.formatDecimal(o.subtotal, 1, 2)}">0</span></div>
+                <div th:if="${o.discountAmount != null && o.discountAmount.signum() > 0}">
+                    Discount: −৳ <span th:text="${#numbers.formatDecimal(o.discountAmount, 1, 2)}">0</span>
+                    <span th:if="${o.couponCode != null && !#strings.isEmpty(o.couponCode)}">(<span th:text="${o.couponCode}">code</span>)</span>
+                </div>
+                <div style="font-weight:800; color: var(--text); margin-top:6px; font-size:16px;">
+                    Total cost: ৳ <span th:text="${#numbers.formatDecimal(o.totalPrice, 1, 2)}">0</span>
+                </div>
+            </div>
+
+            <form th:if="${#strings.toString(o.status) == 'PENDING'}"
+                  th:action="@{/ui/orders/{id}/cancel(id=${o.id})}" method="post" class="row-actions" style="margin-top:12px;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button class="btn" type="submit">Cancel order</button>
+            </form>
+        </article>
+    </div>
+</main>
+</body>
+</html>

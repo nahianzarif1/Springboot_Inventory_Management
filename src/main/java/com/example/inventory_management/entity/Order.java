@@ -2,6 +2,7 @@ package com.example.inventory_management.entity;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,15 +38,21 @@ public class Order {
     /** Sum of line items before coupon discount */
     @Builder.Default
     @Column(nullable = false, precision = 19, scale = 2)
+    @ColumnDefault("0")
     private BigDecimal subtotal = BigDecimal.ZERO;
 
     @Builder.Default
     @Column(nullable = false, precision = 19, scale = 2)
+    @ColumnDefault("0")
     private BigDecimal discountAmount = BigDecimal.ZERO;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "coupon_id")
     private Coupon coupon;
+
+    /** Comma-separated codes when multiple seller coupons apply (single order). */
+    @Column(name = "applied_coupon_codes", length = 500)
+    private String appliedCouponCodes;
 
     @Builder.Default
     @Column(nullable = false, precision = 19, scale = 2)

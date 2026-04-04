@@ -1,5 +1,6 @@
 package com.example.inventory_management.controller;
 
+import com.example.inventory_management.repository.OrderRepository;
 import com.example.inventory_management.repository.ProductRepository;
 import com.example.inventory_management.service.AuthService;
 import jakarta.validation.constraints.Email;
@@ -8,6 +9,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -23,16 +25,37 @@ public class ViewController {
 
     private final AuthService authService;
     private final ProductRepository productRepository;
+    private final OrderRepository orderRepository;
 
-    public ViewController(AuthService authService, ProductRepository productRepository) {
+    public ViewController(AuthService authService, ProductRepository productRepository, OrderRepository orderRepository) {
         this.authService = authService;
         this.productRepository = productRepository;
+        this.orderRepository = orderRepository;
     }
 
     @GetMapping("/")
-    public String home(Model model) {
+    public String home(Model model, Authentication authentication) {
         model.addAttribute("lowStockProducts", productRepository.findLowStockGlobal(10, PageRequest.of(0, 8)));
+        boolean roleAdmin = hasRole(authentication, "ADMIN");
+        boolean roleSeller = hasRole(authentication, "SELLER");
+        boolean roleBuyer = hasRole(authentication, "BUYER");
+        model.addAttribute("roleAdmin", roleAdmin);
+        model.addAttribute("roleSeller", roleSeller);
+        model.addAttribute("roleBuyer", roleBuyer);
+        model.addAttribute("totalProducts", productRepository.count());
+        model.addAttribute("totalOrders", orderRepository.count());
+        if (authentication != null) {
+            model.addAttribute("dashboardUser", authentication.getName());
+        }
         return "index";
+    }
+
+    private static boolean hasRole(Authentication authentication, String role) {
+        if (authentication == null) {
+            return false;
+        }
+        return authentication.getAuthorities().stream()
+                .anyMatch(a -> ("ROLE_" + role).equals(a.getAuthority()));
     }
 
     @GetMapping("/login")

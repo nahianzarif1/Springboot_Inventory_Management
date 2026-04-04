@@ -33,3 +33,20 @@ jobs:
       - name: Build and run tests
         run: ./mvnw -B verify
 
+  # After tests pass on main, tell Render to start a new deploy (Deploy Hook URL in repo secrets).
+  deploy-render:
+    needs: build-and-test
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        env:
+          RENDER_DEPLOY_HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$RENDER_DEPLOY_HOOK_URL" ]; then
+            echo "::warning::RENDER_DEPLOY_HOOK_URL is not set. Add it under Repo Settings → Secrets to redeploy Render from GitHub."
+            exit 0
+          fi
+          curl -fsS -X POST "$RENDER_DEPLOY_HOOK_URL"
+          echo "Render deploy triggered."
+

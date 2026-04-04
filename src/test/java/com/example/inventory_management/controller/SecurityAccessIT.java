@@ -45,4 +45,25 @@ class SecurityAccessIT {
                         .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("adminIT", "pw")))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    void adminCanLoadAdminOrdersPage() throws Exception {
+        mvc.perform(get("/ui/admin/orders")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("adminIT", "pw")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void buyerCanLoadOrdersPage() throws Exception {
+        mvc.perform(get("/ui/orders")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("buyerIT", "pw")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void adminWithoutBuyerRoleCannotLoadBuyerOrdersPage() throws Exception {
+        mvc.perform(get("/ui/orders")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic("adminIT", "pw")))
+                .andExpect(status().isForbidden());
+    }
 }
