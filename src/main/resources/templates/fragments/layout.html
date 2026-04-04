@@ -20,7 +20,8 @@
             <a th:href="@{/}">Dashboard</a>
             <a th:href="@{/ui/products}">Products</a>
             <a sec:authorize="hasRole('BUYER')" th:href="@{/ui/cart}">Cart</a>
-            <a sec:authorize="hasRole('BUYER')" th:href="@{/ui/orders}">My Orders</a>
+            <a sec:authorize="hasRole('BUYER')" th:href="@{/ui/orders}">Orders</a>
+            <a sec:authorize="hasRole('ADMIN')" th:href="@{/ui/admin/orders}">All orders</a>
             <a sec:authorize="hasRole('ADMIN')" th:href="@{/ui/admin}">Admin</a>
             <a th:href="@{/login}" sec:authorize="!isAuthenticated()">Login</a>
             <form sec:authorize="isAuthenticated()" th:action="@{/auth/logout}" method="post" style="display:inline;">

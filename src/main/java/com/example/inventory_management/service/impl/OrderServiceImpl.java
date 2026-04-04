@@ -23,7 +23,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.List;
+import java.util.Map;
+
+import static java.util.Collections.emptyMap;
 
 @Service
 public class OrderServiceImpl implements OrderService {
@@ -56,44 +60,124 @@ public class OrderServiceImpl implements OrderService {
     @Override
     @Transactional
     public OrderDTO createOrderFromCart(String buyerUsername) {
-        return createOrderFromCart(buyerUsername, null);
+        return createOrderFromCart(buyerUsername, null, null, null);
     }
 
     @Override
     @Transactional
     public OrderDTO createOrderFromCart(String buyerUsername, String couponCode) {
+        return createOrderFromCart(buyerUsername, couponCode, null, null);
+    }
+
+    @Override
+    @Transactional
+    public OrderDTO createOrderFromCart(String buyerUsername, String couponCode, Map<Long, String> sellerIdToCouponCode) {
+        return createOrderFromCart(buyerUsername, couponCode, sellerIdToCouponCode, null);
+    }
+
+    @Override
+    @Transactional
+    public OrderDTO createOrderFromCart(
+            String buyerUsername,
+            String couponCode,
+            Map<Long, String> sellerIdToCouponCode,
+            Map<Long, String> productIdToCouponCode) {
         User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
                 .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
 
-        List<CartItem> cart = cartItemRepository.findByBuyer(buyer);
+        List<CartItem> cart = cartItemRepository.findByBuyerWithProductDetails(buyer);
         if (cart.isEmpty()) {
             throw new ConflictException("Cart is empty");
         }
 
         List<CreateItem> items = cart.stream()
-                .map(ci -> new CreateItem(ci.getProduct().getId(), ci.getQuantity()))
+                .map(ci -> {
+                    Product p = ci.getProduct();
+                    if (p == null) {
+                        throw new ConflictException("Cart contains an invalid product. Remove it and try again.");
+                    }
+                    return new CreateItem(p.getId(), ci.getQuantity());
+                })
                 .toList();
 
-        OrderDTO dto = placeOrder(buyer, items, couponCode);
+        OrderDTO dto = placeOrder(buyer, items, couponCode, sellerIdToCouponCode, productIdToCouponCode);
         cartItemRepository.deleteByBuyer(buyer);
         return dto;
     }
 
     @Override
     @Transactional
+    public OrderDTO checkoutFromCartAndPayDemo(String buyerUsername, String paymentMethod) {
+        User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
+        List<CartItem> cart = cartItemRepository.findByBuyerWithProductDetails(buyer);
+        if (cart.isEmpty()) {
+            throw new ConflictException("Cart is empty");
+        }
+        List<CreateItem> items = cart.stream()
+                .map(ci -> {
+                    Product p = ci.getProduct();
+                    if (p == null) {
+                        throw new ConflictException("Cart contains an invalid product. Remove it and try again.");
+                    }
+                    return new CreateItem(p.getId(), ci.getQuantity());
+                })
+                .toList();
+        OrderDTO placed = placeOrder(buyer, items, null, null, null);
+        cartItemRepository.deleteByBuyer(buyer);
+        Order o = orderRepository.findById(placed.id())
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (!o.getBuyer().getUsername().equalsIgnoreCase(buyerUsername)) {
+            throw new ConflictException("Cannot pay another user's order");
+        }
+        if (isCashOnDelivery(paymentMethod)) {
+            return toDto(o);
+        }
+        applyDemoPayment(o);
+        return toDto(o);
+    }
+
+    private static boolean isCashOnDelivery(String paymentMethod) {
+        return paymentMethod != null && "COD".equalsIgnoreCase(paymentMethod.trim());
+    }
+
+    @Override
+    @Transactional
     public OrderDTO createOrder(String buyerUsername, List<CreateItem> items) {
-        return createOrder(buyerUsername, items, null);
+        return createOrder(buyerUsername, items, null, null, null);
     }
 
     @Override
     @Transactional
     public OrderDTO createOrder(String buyerUsername, List<CreateItem> items, String couponCode) {
-        User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
-        return placeOrder(buyer, items, couponCode);
+        return createOrder(buyerUsername, items, couponCode, null, null);
     }
 
-    private OrderDTO placeOrder(User buyer, List<CreateItem> items, String couponCode) {
+    @Override
+    @Transactional
+    public OrderDTO createOrder(String buyerUsername, List<CreateItem> items, String couponCode, Map<Long, String> sellerIdToCouponCode) {
+        return createOrder(buyerUsername, items, couponCode, sellerIdToCouponCode, null);
+    }
+
+    @Override
+    @Transactional
+    public OrderDTO createOrder(
+            String buyerUsername,
+            List<CreateItem> items,
+            String couponCode,
+            Map<Long, String> sellerIdToCouponCode,
+            Map<Long, String> productIdToCouponCode) {
+        User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
+                .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
+        return placeOrder(buyer, items, couponCode, sellerIdToCouponCode, productIdToCouponCode);
+    }
+
+    private OrderDTO placeOrder(
+            User buyer,
+            List<CreateItem> items,
+            String couponCode,
+            Map<Long, String> sellerIdToCouponCode,
+            Map<Long, String> productIdToCouponCode) {
         if (items == null || items.isEmpty()) {
             throw new ConflictException("Order items required");
         }
@@ -133,19 +217,26 @@ public class OrderServiceImpl implements OrderService {
             subtotal = subtotal.add(product.getPrice().multiply(BigDecimal.valueOf(reqItem.quantity())));
         }
 
-        CouponService.DiscountCalculation applied = couponService.calculateDiscount(couponCode, items);
-        BigDecimal discount = applied.discountAmount() != null ? applied.discountAmount() : BigDecimal.ZERO;
-        Coupon coupon = applied.couponOrNull();
+        Map<Long, String> sellerMap = sellerIdToCouponCode != null ? sellerIdToCouponCode : emptyMap();
+        Map<Long, String> productMap = productIdToCouponCode != null ? productIdToCouponCode : emptyMap();
+        CouponService.CombinedDiscount combined =
+                couponService.calculateCombinedDiscount(couponCode, sellerMap, productMap, items);
+        BigDecimal discount = combined.totalDiscount() != null ? combined.totalDiscount() : BigDecimal.ZERO;
 
         order.setSubtotal(subtotal);
         order.setDiscountAmount(discount);
-        order.setCoupon(coupon);
-        order.setTotalPrice(subtotal.subtract(discount));
+        order.setAppliedCouponCodes(combined.appliedCodesSummary());
+        order.setCoupon(combined.singleCouponOrNull());
+        BigDecimal total = subtotal.subtract(discount);
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            total = BigDecimal.ZERO;
+        }
+        order.setTotalPrice(total.setScale(2, RoundingMode.HALF_UP));
 
         Order saved = orderRepository.save(order);
 
-        if (coupon != null) {
-            Coupon fresh = couponRepository.findById(coupon.getId())
+        for (Coupon c : combined.couponsToIncrement()) {
+            Coupon fresh = couponRepository.findById(c.getId())
                     .orElseThrow(() -> new ResourceNotFoundException("Coupon not found"));
             fresh.setUsageCount(fresh.getUsageCount() + 1);
         }
@@ -153,15 +244,7 @@ public class OrderServiceImpl implements OrderService {
         return toDto(saved);
     }
 
-    @Override
-    @Transactional
-    public OrderDTO payDemo(long orderId, String buyerUsername) {
-        Order o = orderRepository.findById(orderId)
-                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
-
-        if (!o.getBuyer().getUsername().equalsIgnoreCase(buyerUsername)) {
-            throw new ConflictException("Cannot pay another user's order");
-        }
+    private void applyDemoPayment(Order o) {
         if (o.getStatus() == OrderStatus.CANCELED) {
             throw new ConflictException("Cannot pay a canceled order");
         }
@@ -174,8 +257,19 @@ public class OrderServiceImpl implements OrderService {
         if (o.getStatus() != OrderStatus.PENDING) {
             throw new ConflictException("Order is not payable");
         }
-
         o.setStatus(OrderStatus.PAID);
+    }
+
+    @Override
+    @Transactional
+    public OrderDTO payDemo(long orderId, String buyerUsername) {
+        Order o = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        if (!o.getBuyer().getUsername().equalsIgnoreCase(buyerUsername)) {
+            throw new ConflictException("Cannot pay another user's order");
+        }
+        applyDemoPayment(o);
         return toDto(o);
     }
 
@@ -183,11 +277,13 @@ public class OrderServiceImpl implements OrderService {
     @Transactional(readOnly = true)
     public List<OrderDTO> listOrders(String buyerUsername, boolean admin) {
         if (admin) {
-            return orderRepository.findAll().stream().map(this::toDto).toList();
+            return orderRepository.findAllByOrderByCreatedAtDesc().stream().map(this::toDto).toList();
         }
-        User buyer = userRepository.findByUsernameIgnoreCase(buyerUsername)
-                .orElseThrow(() -> new ResourceNotFoundException("Buyer not found"));
-        return orderRepository.findByBuyer(buyer).stream().map(this::toDto).toList();
+        return userRepository.findByUsernameIgnoreCase(buyerUsername)
+                .map(buyer -> orderRepository.findByBuyerOrderByCreatedAtDesc(buyer).stream()
+                        .map(this::toDto)
+                        .toList())
+                .orElseGet(List::of);
     }
 
     @Override
@@ -230,8 +326,11 @@ public class OrderServiceImpl implements OrderService {
         Order o = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
 
-        if (o.getStatus() == OrderStatus.SHIPPED && status == OrderStatus.CANCELED) {
-            throw new ConflictException("Cannot cancel after shipped");
+        if (o.getStatus() == OrderStatus.CANCELED) {
+            throw new ConflictException("Cannot change status of a canceled order");
+        }
+        if (o.getStatus() == OrderStatus.SHIPPED && status != OrderStatus.SHIPPED) {
+            throw new ConflictException("Cannot change status after shipped");
         }
 
         o.setStatus(status);
@@ -242,7 +341,16 @@ public class OrderServiceImpl implements OrderService {
     @Transactional
     public OrderDTO updateStatusForSeller(long orderId, OrderStatus status, String sellerUsername) {
         getOrderForSeller(orderId, sellerUsername);
-        return updateStatus(orderId, status);
+        Order o = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (status != OrderStatus.SHIPPED) {
+            throw new ConflictException("Sellers can only mark orders as shipped");
+        }
+        if (o.getStatus() != OrderStatus.PAID) {
+            throw new ConflictException("Only paid orders can be marked shipped");
+        }
+        o.setStatus(OrderStatus.SHIPPED);
+        return toDto(o);
     }
 
     @Override
@@ -259,6 +367,9 @@ public class OrderServiceImpl implements OrderService {
         if (o.getStatus() == OrderStatus.CANCELED) {
             throw new ConflictException("Order already canceled");
         }
+        if (o.getStatus() != OrderStatus.PENDING) {
+            throw new ConflictException("Only unpaid pending orders can be canceled");
+        }
 
         for (OrderItem item : o.getItems()) {
             Product product = item.getProduct();
@@ -268,24 +379,45 @@ public class OrderServiceImpl implements OrderService {
             inventoryLogService.record(product, old, product.getStockQuantity(), seller);
         }
 
-        if (o.getCoupon() != null && o.getDiscountAmount() != null
-                && o.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
-            couponRepository.findById(o.getCoupon().getId()).ifPresent(c -> {
-                if (c.getUsageCount() > 0) {
-                    c.setUsageCount(c.getUsageCount() - 1);
-                }
-            });
+        if (o.getDiscountAmount() != null && o.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            decrementCouponUsages(o);
         }
 
         o.setStatus(OrderStatus.CANCELED);
         return toDto(o);
     }
 
+    private void decrementCouponUsages(Order o) {
+        if (o.getAppliedCouponCodes() != null && !o.getAppliedCouponCodes().isBlank()) {
+            for (String part : o.getAppliedCouponCodes().split(",")) {
+                String code = part.trim();
+                if (code.isEmpty()) {
+                    continue;
+                }
+                couponRepository.findByCodeIgnoreCase(code).ifPresent(c -> {
+                    if (c.getUsageCount() > 0) {
+                        c.setUsageCount(c.getUsageCount() - 1);
+                    }
+                });
+            }
+            return;
+        }
+        if (o.getCoupon() != null) {
+            couponRepository.findById(o.getCoupon().getId()).ifPresent(c -> {
+                if (c.getUsageCount() > 0) {
+                    c.setUsageCount(c.getUsageCount() - 1);
+                }
+            });
+        }
+    }
+
     private OrderDTO toDto(Order o) {
         BigDecimal discount = o.getDiscountAmount() != null ? o.getDiscountAmount() : BigDecimal.ZERO;
         BigDecimal total = o.getTotalPrice() != null ? o.getTotalPrice() : BigDecimal.ZERO;
         BigDecimal subtotal = o.getSubtotal() != null ? o.getSubtotal() : total.add(discount);
-        String couponCode = o.getCoupon() != null ? o.getCoupon().getCode() : null;
+        String couponCode = o.getAppliedCouponCodes() != null && !o.getAppliedCouponCodes().isBlank()
+                ? o.getAppliedCouponCodes()
+                : (o.getCoupon() != null ? o.getCoupon().getCode() : null);
 
         return new OrderDTO(
                 o.getId(),
@@ -298,11 +430,17 @@ public class OrderServiceImpl implements OrderService {
                 couponCode,
                 o.getTotalPrice() != null ? o.getTotalPrice() : BigDecimal.ZERO,
                 o.getItems().stream()
-                        .map(i -> new OrderDTO.OrderItemDTO(
-                                i.getProduct().getId(),
-                                i.getProduct().getName(),
-                                i.getQuantity(),
-                                i.getUnitPrice()))
+                        .map(i -> {
+                            Product p = i.getProduct();
+                            if (p == null) {
+                                return new OrderDTO.OrderItemDTO(0L, "(product removed)", i.getQuantity(), i.getUnitPrice());
+                            }
+                            return new OrderDTO.OrderItemDTO(
+                                    p.getId(),
+                                    p.getName() != null ? p.getName() : "—",
+                                    i.getQuantity(),
+                                    i.getUnitPrice());
+                        })
                         .toList()
         );
     }

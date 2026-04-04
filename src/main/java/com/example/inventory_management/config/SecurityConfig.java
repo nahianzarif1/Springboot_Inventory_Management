@@ -56,15 +56,15 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.ignoringRequestMatchers("/auth/**", "/products/**", "/orders/**", "/cart/**", "/admin/**", "/seller/**"))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/", "/login", "/register", "/auth/register",
+                        .requestMatchers("/", "/home", "/catalog", "/shopping-cart", "/my-orders",
+                                "/login", "/register", "/auth/register", "/error",
                                 "/css/**", "/js/**", "/images/**", "/webjars/**", "/uploads/**").permitAll()
 
                         // Public product browsing (REST + UI)
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/products/**", "/ui/products", "/ui/products/**").permitAll()
 
-                        // Buyer cart; orders visible to buyers and admins
-                        .requestMatchers("/ui/cart/**").hasRole("BUYER")
-                        .requestMatchers("/ui/orders", "/ui/orders/**").hasAnyRole("BUYER", "ADMIN")
+                        // Buyer cart + orders page (not REST /orders — that is matched below with same role)
+                        .requestMatchers("/ui/cart/**", "/ui/orders", "/ui/orders/**", "/ui/my-orders").hasRole("BUYER")
 
                         // Admin UI & reports
                         .requestMatchers("/ui/admin/**", "/ui/reports").hasRole("ADMIN")
@@ -104,13 +104,17 @@ public class SecurityConfig {
                             } else if (isSeller) {
                                 response.sendRedirect("/ui/seller");
                             } else if (isBuyer) {
-                                response.sendRedirect("/ui/products");
+                                response.sendRedirect("/");
                             } else {
                                 response.sendRedirect("/");
                             }
                         })
                 )
-                .logout(logout -> logout.logoutUrl("/auth/logout"));
+                .logout(logout -> logout
+                        .logoutUrl("/auth/logout")
+                        .logoutSuccessUrl("/login?logout")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID"));
 
         return http.build();
     }

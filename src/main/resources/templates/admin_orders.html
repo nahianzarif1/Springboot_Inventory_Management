@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>All orders</title>
+    <link rel="stylesheet" th:href="@{/css/app.css}"/>
+</head>
+<body>
+<div th:replace="~{fragments/nav :: nav}"></div>
+<div th:replace="~{fragments/nav :: alerts}"></div>
+<main class="container">
+    <div class="h1" style="margin-top:0;">All orders</div>
+    <p class="sub">Every order in the system. Set status for operations. Checkout (cart) creates and pays orders in one demo step.</p>
+
+    <div class="card" th:if="${orders == null || orders.isEmpty()}">
+        <p class="muted">No orders in the system yet.</p>
+    </div>
+
+    <div class="card" th:unless="${orders == null || orders.isEmpty()}">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>ID</th>
+                <th>Buyer</th>
+                <th>Status</th>
+                <th>Subtotal</th>
+                <th>Total</th>
+                <th>Created</th>
+                <th>Items</th>
+                <th>Admin</th>
+            </tr>
+            </thead>
+            <tbody>
+            <tr th:each="o : ${orders}">
+                <td th:text="${o.id}">1</td>
+                <td th:text="${o.buyerUsername}">buyer</td>
+                <td th:text="${o.status}">PENDING</td>
+                <td th:text="${#numbers.formatDecimal(o.subtotal, 1, 2)}">0</td>
+                <td th:text="${#numbers.formatDecimal(o.totalPrice, 1, 2)}">0</td>
+                <td th:text="${o.createdAt}">-</td>
+                <td>
+                    <ul class="muted stack" style="margin:0;padding-left:18px;">
+                        <li th:each="i : ${o.items}">
+                            <span th:text="${i.productName}">P</span> × <span th:text="${i.quantity}">0</span>
+                            @ ৳ <span th:text="${#numbers.formatDecimal(i.unitPrice, 1, 2)}">0</span>
+                            (line ৳ <span th:text="${#numbers.formatDecimal(i.lineTotal, 1, 2)}">0</span>)
+                        </li>
+                    </ul>
+                </td>
+                <td>
+                    <form th:action="@{/ui/admin/orders/{id}/status(id=${o.id})}" method="post" class="row-actions">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                        <select name="status">
+                            <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}"></option>
+                        </select>
+                        <button class="btn primary" type="submit">Set status</button>
+                    </form>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+</body>
+</html>

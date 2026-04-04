@@ -11,51 +11,61 @@
 <div th:replace="~{fragments/nav :: alerts}"></div>
 <main class="container" sec:authorize="hasRole('BUYER')">
     <div class="h1">Your cart</div>
-    <p class="sub">Update quantities or remove lines, then checkout to place an order.</p>
+    <p class="sub">Update quantities, review the total, then <strong>Place order</strong>. You are taken to the <a th:href="@{/ui/orders}">Orders</a> page. <strong>Cash on Delivery</strong> keeps the order <strong>PENDING</strong> until paid on delivery; <strong>Card</strong> / <strong>bKash</strong> (demo) mark it <strong>PAID</strong> immediately.</p>
 
     <div class="card" th:if="${#lists.isEmpty(cartItems)}">
         <p class="muted">Cart is empty. <a th:href="@{/ui/products}">Browse products</a>.</p>
     </div>
 
-    <div class="card" th:unless="${#lists.isEmpty(cartItems)}">
-        <table class="table" id="cartTable">
-            <thead>
-            <tr>
-                <th>Product</th>
-                <th>Unit price</th>
-                <th>Qty</th>
-                <th>Line</th>
-                <th></th>
-            </tr>
-            </thead>
-            <tbody>
-            <tr th:each="item : ${cartItems}" th:attr="data-unit=${item.unitPrice},data-qty=${item.quantity}">
-                <td th:text="${item.productName}">Name</td>
-                <td th:text="${item.unitPrice}">0</td>
-                <td>
-                    <form th:action="@{/ui/cart/update}" method="post" class="row-actions">
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                        <input type="hidden" name="productId" th:value="${item.productId}"/>
-                        <input type="number" name="quantity" th:value="${item.quantity}" min="1" style="width:72px;"/>
-                        <button class="btn" type="submit">Update</button>
-                    </form>
-                </td>
-                <td th:text="${item.unitPrice * item.quantity}">0</td>
-                <td>
-                    <form th:action="@{/ui/cart/remove}" method="post">
-                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                        <input type="hidden" name="productId" th:value="${item.productId}"/>
-                        <button class="btn danger" type="submit">Remove</button>
-                    </form>
-                </td>
-            </tr>
-            </tbody>
-        </table>
+    <th:block th:unless="${#lists.isEmpty(cartItems)}">
+        <form id="checkout-form" th:action="@{/ui/cart/checkout}" method="post">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+        </form>
+
+        <div class="card" style="margin-bottom:16px;">
+            <table class="table cartTable" style="margin-top:8px;">
+                <thead>
+                <tr>
+                    <th>Product</th>
+                    <th>Seller</th>
+                    <th>Unit price</th>
+                    <th>Qty</th>
+                    <th>Line total</th>
+                    <th></th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="item : ${cartItems}" th:attr="data-unit=${item.unitPrice},data-qty=${item.quantity}">
+                    <td>
+                        <a th:href="@{'/ui/products/' + ${item.productId}}" th:text="${item.productName}" style="color:inherit; font-weight:800;">Name</a>
+                    </td>
+                    <td th:text="${item.sellerName}">—</td>
+                    <td th:text="${item.unitPrice}">0</td>
+                    <td>
+                        <form th:action="@{/ui/cart/update}" method="post" class="row-actions">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="productId" th:value="${item.productId}"/>
+                            <input type="number" name="quantity" th:value="${item.quantity}" min="1" style="width:72px;"/>
+                            <button class="btn" type="submit">Update</button>
+                        </form>
+                    </td>
+                    <td th:text="${item.unitPrice * item.quantity}">0</td>
+                    <td>
+                        <form th:action="@{/ui/cart/remove}" method="post">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                            <input type="hidden" name="productId" th:value="${item.productId}"/>
+                            <button class="btn danger" type="submit">Remove</button>
+                        </form>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
 
         <div class="checkout-box">
             <div class="summary">
                 <div class="muted" style="font-weight:900;">Order summary</div>
-                <div class="muted" style="margin-top:8px;">Checkout will create an order and reduce stock.</div>
+                <div class="muted" style="margin-top:8px;">Checkout creates your order and reduces stock. COD orders stay pending; other demo methods simulate instant payment.</div>
 
                 <div class="card" style="margin-top:12px;">
                     <div style="display:flex; justify-content:space-between; gap:12px;">
@@ -64,42 +74,36 @@
                             <div style="font-weight:900; font-size: 18px;" id="itemCount">0</div>
                         </div>
                         <div style="text-align:right;">
-                            <div class="muted">Subtotal</div>
+                            <div class="muted">Total</div>
                             <div style="font-weight:900; font-size: 18px;">৳ <span id="subtotal">0</span></div>
                         </div>
                     </div>
-                    <div class="muted" style="margin-top:8px;">(Demo) Shipping: ৳ 0 • Total = Subtotal</div>
+                    <div class="muted" style="margin-top:8px;">Demo: shipping ৳ 0. No coupons—total is sum of line items.</div>
                 </div>
             </div>
             <div class="payment">
                 <div class="muted" style="font-weight:900;">Demo payment</div>
-                <div class="muted" style="margin-top:6px;">Choose any option below (no real payment is processed).</div>
+                <div class="muted" style="margin-top:6px;">Choose an option (not processed for real).</div>
 
-                <form th:action="@{/ui/cart/checkout}" method="post" style="margin-top:12px;" class="stack">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-
+                <div class="stack" style="margin-top:12px;">
                     <div class="input">
-                        <label>Coupon code (optional)</label>
-                        <input type="text" name="couponCode" maxlength="40" placeholder="Seller coupon code" autocomplete="off"/>
-                    </div>
-
-                    <div class="input">
-                        <label>Payment method</label>
-                        <select name="paymentMethod">
+                        <label for="payment-method">Payment method</label>
+                        <select id="payment-method" name="paymentMethod" form="checkout-form">
                             <option value="COD">Cash on Delivery (Demo)</option>
                             <option value="CARD">Card (Demo)</option>
                             <option value="BKASH">bKash (Demo)</option>
                         </select>
                     </div>
 
-                    <button class="btn primary" type="submit">Checkout</button>
-                </form>
+                    <button class="btn primary" type="submit" form="checkout-form">Place order</button>
+                    <p class="muted" style="margin-top:10px; margin-bottom:0;">After checkout you will open your <a th:href="@{/ui/orders}">Orders</a> list.</p>
+                </div>
             </div>
         </div>
 
         <script>
             (function () {
-                const rows = document.querySelectorAll('#cartTable tbody tr');
+                const rows = document.querySelectorAll('.cartTable tbody tr');
                 let items = 0;
                 let subtotal = 0;
                 rows.forEach(r => {
@@ -112,7 +116,7 @@
                 document.getElementById('subtotal').textContent = subtotal.toFixed(2);
             })();
         </script>
-    </div>
+    </th:block>
 </main>
 </body>
 </html>

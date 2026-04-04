@@ -81,7 +81,9 @@
                     <span th:text="${#numbers.formatDecimal(p.averageRating, 1, 1)}">0.0</span>
                     <span class="muted">(<span th:text="${p.reviewCount}">0</span> reviews)</span>
                     <span> • </span>
-                    <a th:href="@{'/ui/products/' + ${p.id} + '/reviews'}" style="color: var(--accent); text-decoration:none; font-weight:800;">View</a>
+                    <a th:href="@{'/ui/products/' + ${p.id}}" style="color: var(--accent); text-decoration:none; font-weight:800;">Details</a>
+                    <span> · </span>
+                    <a th:href="@{'/ui/products/' + ${p.id} + '/reviews'}" style="color: var(--accent); text-decoration:none; font-weight:800;">Reviews</a>
                 </div>
 
                 <div class="product-card__actions" sec:authorize="hasRole('BUYER')">

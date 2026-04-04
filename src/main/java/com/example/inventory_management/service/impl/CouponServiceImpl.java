@@ -19,7 +19,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 @Service
 public class CouponServiceImpl implements CouponService {
@@ -114,6 +119,118 @@ public class CouponServiceImpl implements CouponService {
         Coupon c = couponRepository.findByCodeIgnoreCase(code)
                 .orElseThrow(() -> new ResourceNotFoundException("Invalid coupon code"));
 
+        assertCouponUsable(c);
+
+        Long sellerId = c.getSeller().getId();
+        BigDecimal eligible = eligibleSubtotalForSeller(sellerId, items);
+
+        if (eligible.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ConflictException("This coupon applies only to products from this seller; add those items to your cart");
+        }
+
+        BigDecimal discount = computeDiscountAmount(c, eligible);
+
+        if (discount.compareTo(BigDecimal.ZERO) <= 0) {
+            return DiscountCalculation.none();
+        }
+
+        return new DiscountCalculation(discount, c);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CombinedDiscount calculateCombinedDiscount(
+            String globalCouponCodeOrBlank,
+            Map<Long, String> sellerIdToCouponCode,
+            Map<Long, String> productIdToCouponCode,
+            List<OrderService.CreateItem> items) {
+        Map<Long, String> effectiveSeller = new LinkedHashMap<>();
+        if (globalCouponCodeOrBlank != null && !globalCouponCodeOrBlank.isBlank()) {
+            String gc = globalCouponCodeOrBlank.trim().toUpperCase();
+            Coupon g = couponRepository.findByCodeIgnoreCase(gc)
+                    .orElseThrow(() -> new ResourceNotFoundException("Invalid coupon code"));
+            effectiveSeller.putIfAbsent(g.getSeller().getId(), g.getCode());
+        }
+        if (sellerIdToCouponCode != null) {
+            sellerIdToCouponCode.forEach((k, v) -> {
+                if (v != null && !v.isBlank()) {
+                    effectiveSeller.put(k, v.trim().toUpperCase());
+                }
+            });
+        }
+
+        Map<Long, String> prodMap = productIdToCouponCode != null ? productIdToCouponCode : Map.of();
+
+        Map<Long, BigDecimal> eligibleByCouponId = new LinkedHashMap<>();
+        Map<Long, Coupon> couponById = new LinkedHashMap<>();
+
+        for (OrderService.CreateItem ci : items) {
+            Product p = productRepository.findById(ci.productId())
+                    .orElseThrow(() -> new ResourceNotFoundException("Invalid product"));
+            if (p.getSeller() == null) {
+                continue;
+            }
+            Long sellerId = p.getSeller().getId();
+            BigDecimal line = p.getPrice().multiply(BigDecimal.valueOf(ci.quantity()));
+
+            String code = null;
+            String pc = prodMap.get(ci.productId());
+            if (pc != null && !pc.isBlank()) {
+                code = pc.trim().toUpperCase();
+            } else {
+                code = effectiveSeller.get(sellerId);
+            }
+            if (code == null || code.isBlank()) {
+                continue;
+            }
+
+            Coupon c = couponRepository.findByCodeIgnoreCase(code)
+                    .orElseThrow(() -> new ResourceNotFoundException("Invalid coupon code"));
+            if (!c.getSeller().getId().equals(sellerId)) {
+                throw new ConflictException("Coupon does not apply to this product or seller");
+            }
+
+            eligibleByCouponId.merge(c.getId(), line, BigDecimal::add);
+            couponById.putIfAbsent(c.getId(), c);
+        }
+
+        if (eligibleByCouponId.isEmpty()) {
+            return CombinedDiscount.none();
+        }
+
+        BigDecimal total = BigDecimal.ZERO;
+        List<Coupon> toIncrement = new ArrayList<>();
+        List<String> codeLabels = new ArrayList<>();
+        Set<Long> seenCouponIds = new LinkedHashSet<>();
+
+        for (Map.Entry<Long, BigDecimal> e : eligibleByCouponId.entrySet()) {
+            Coupon c = couponById.get(e.getKey());
+            assertCouponUsable(c);
+            BigDecimal eligible = e.getValue();
+            if (eligible.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            BigDecimal d = computeDiscountAmount(c, eligible);
+            if (d.compareTo(BigDecimal.ZERO) <= 0) {
+                continue;
+            }
+            total = total.add(d);
+            if (seenCouponIds.add(c.getId())) {
+                toIncrement.add(c);
+                codeLabels.add(c.getCode());
+            }
+        }
+
+        if (total.compareTo(BigDecimal.ZERO) <= 0) {
+            return CombinedDiscount.none();
+        }
+
+        String summary = String.join(", ", codeLabels);
+        Coupon single = toIncrement.size() == 1 ? toIncrement.get(0) : null;
+        return new CombinedDiscount(total, toIncrement, summary, single);
+    }
+
+    private void assertCouponUsable(Coupon c) {
         if (!c.isActive()) {
             throw new ConflictException("Coupon is inactive");
         }
@@ -123,8 +240,9 @@ public class CouponServiceImpl implements CouponService {
         if (c.getUsageLimit() != null && c.getUsageCount() >= c.getUsageLimit()) {
             throw new ConflictException("Coupon usage limit reached");
         }
+    }
 
-        Long sellerId = c.getSeller().getId();
+    private BigDecimal eligibleSubtotalForSeller(Long sellerId, List<OrderService.CreateItem> items) {
         BigDecimal eligible = BigDecimal.ZERO;
         for (OrderService.CreateItem ci : items) {
             Product p = productRepository.findById(ci.productId())
@@ -133,24 +251,15 @@ public class CouponServiceImpl implements CouponService {
                 eligible = eligible.add(p.getPrice().multiply(BigDecimal.valueOf(ci.quantity())));
             }
         }
+        return eligible;
+    }
 
-        if (eligible.compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ConflictException("This coupon applies only to products from this seller; add those items to your cart");
-        }
-
-        BigDecimal discount;
+    private BigDecimal computeDiscountAmount(Coupon c, BigDecimal eligible) {
         if (c.getDiscountType() == DiscountType.PERCENT) {
-            discount = eligible.multiply(c.getDiscountValue())
+            return eligible.multiply(c.getDiscountValue())
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        } else {
-            discount = c.getDiscountValue().min(eligible).setScale(2, RoundingMode.HALF_UP);
         }
-
-        if (discount.compareTo(BigDecimal.ZERO) <= 0) {
-            return DiscountCalculation.none();
-        }
-
-        return new DiscountCalculation(discount, c);
+        return c.getDiscountValue().min(eligible).setScale(2, RoundingMode.HALF_UP);
     }
 
     private CouponDTO toDto(Coupon c) {

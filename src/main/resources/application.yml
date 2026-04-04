@@ -11,7 +11,8 @@ spring:
   jpa:
     hibernate:
       ddl-auto: update
-    open-in-view: false
+    # Thymeleaf + lazy associations: true avoids LazyInitializationException during view render.
+    open-in-view: true
     properties:
       hibernate:
         format_sql: true
